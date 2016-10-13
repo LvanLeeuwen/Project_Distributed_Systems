@@ -1,0 +1,25 @@
+{ "namespace" : "ihome.proto.serverside",
+	"protocol" : "ServerProto",
+	"messages" : {
+		"connect" : {
+			"request" : [],
+			"response" : "string"
+		},
+		"disconnect" : {
+			"request" : [{"name" : "uid", "type" : "string"}],
+			"response" : "string"
+		},
+		"update_temperature" : {
+			"request" : [{"name" : "uid", "type" : "string"}],
+			"response" : "string"
+		},
+		"get_temperature_list" : {
+			"request" : [{"name" : "uid", "type" : "string" }, { "name" : "sensor_id", "type" : "string"}],
+			"response" : "string"
+		},
+		"get_temperature_current" : {
+			"request" : [{"name" : "uid", "type" : "string" }],
+			"response" : "string"
+		}		
+	}
+}
