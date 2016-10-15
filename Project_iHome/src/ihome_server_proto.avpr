@@ -10,7 +10,7 @@
 			"response" : "string"
 		},
 		"update_temperature" : {
-			"request" : [{"name" : "uid", "type" : "string"}],
+			"request" : [{"name" : "uid", "type" : "string"}, {"name" : "value", "type" : "float"}],
 			"response" : "string"
 		},
 		"get_temperature_list" : {

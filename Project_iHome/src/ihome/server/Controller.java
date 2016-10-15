@@ -1,6 +1,8 @@
 package ihome.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.avro.AvroRemoteException;
@@ -12,6 +14,7 @@ public class Controller implements ServerProto
 {
 	
 	private Map<String, Device> uidmap = new HashMap<String, Device>();
+	private Map<String, ArrayList<Float>> sensormap = new HashMap<String, ArrayList<Float>>();
 	private int nextID = 0;
 	private final int nr_types = 4;
 
@@ -25,6 +28,8 @@ public class Controller implements ServerProto
 		
 		try{
 			uidmap.put(Integer.toString(nextID), new Device(device_type));
+			if(device_type == 1)
+				sensormap.put(Integer.toString(nextID), new ArrayList<Float>());
 			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"UID\" : NULL, \"Error\" : \"[Error] " + e.getMessage();
@@ -36,7 +41,7 @@ public class Controller implements ServerProto
 		
 		if(!uidmap.containsKey(uid))
 		{
-			return "{\"Error\" : \"[Error] uid not found in current session, maybe you are already disconnected?\"}";
+			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
 		}
 		try{
 			uidmap.remove(uid);
@@ -46,12 +51,24 @@ public class Controller implements ServerProto
 		}
 		
 	}
-
+	
 	@Override
-	public CharSequence update_temperature(CharSequence uid) throws AvroRemoteException {
-		// TODO Auto-generated method stub
+	public CharSequence update_temperature(CharSequence uid, float value) throws AvroRemoteException {
+		if(!uidmap.containsKey(uid)) {
+			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
+		}
+		else if(!sensormap.containsKey(uid)){
+			return "{\"Error\" : \"[Error] Device with uid " + uid +  " is not heat sensor.\"}";
+		}
+		try{
+
+		}catch (Exception e){
+
+		}
 		return null;
 	}
+
+	
 
 	@Override
 	public CharSequence get_temperature_list(CharSequence uid, CharSequence sensor_id) throws AvroRemoteException {
@@ -66,7 +83,14 @@ public class Controller implements ServerProto
 	}
 	
 	
-	
+	public void printInSession(){
+		System.out.println("Currently in session:");
+		for(String id : uidmap.keySet())
+		{
+			System.out.print(id + " ");
+		}
+		System.out.print("\n");
+	}
 	
 	public static void main(String [] args){
 		System.out.println("Hello world" );
@@ -79,12 +103,17 @@ public class Controller implements ServerProto
 			System.out.println(c.connect(4));
 			System.out.println(c.connect(-1));
 			System.out.println(c.connect(3));
-			
+			System.out.println(c.disconnect("3"));
+			c.printInSession();
+
+
 		} catch (AvroRemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
+
+	
 
 	
 
