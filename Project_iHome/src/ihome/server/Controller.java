@@ -95,8 +95,8 @@ public class Controller implements ServerProto
 		}
 		System.out.print("\n");
 	}
-	
-	public static void main(String [] args){
+
+	public static void runServer(){
 		Server server = null;
 		try
 		{
@@ -113,5 +113,9 @@ public class Controller implements ServerProto
 			server.join();
 
 		}catch(InterruptedException e){}
+	}
+	
+	public static void main(String [] args){
+		Controller.runServer();
 	}
 }
