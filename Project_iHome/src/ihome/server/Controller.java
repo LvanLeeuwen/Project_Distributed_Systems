@@ -1,11 +1,15 @@
 package ihome.server;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.apache.avro.AvroRemoteException;
+import org.apache.avro.ipc.SaslSocketServer;
+import org.apache.avro.ipc.Server;
+import org.apache.avro.ipc.specific.SpecificResponder;
 
 import ihome.proto.serverside.ServerProto;
 
@@ -91,30 +95,27 @@ public class Controller implements ServerProto
 		}
 		System.out.print("\n");
 	}
+
+	public static void runServer(){
+		Server server = null;
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
+					new Controller()), new InetSocketAddress(6789));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+		try{
+			server.join();
+
+		}catch(InterruptedException e){}
+	}
 	
 	public static void main(String [] args){
-		System.out.println("Hello world" );
-		
-		Controller c = new Controller();
-		try {
-			System.out.println(c.connect(0));
-			System.out.println(c.connect(1));
-			System.out.println(c.connect(2));
-			System.out.println(c.connect(4));
-			System.out.println(c.connect(-1));
-			System.out.println(c.connect(3));
-			System.out.println(c.disconnect("3"));
-			c.printInSession();
-
-
-		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		Controller.runServer();
 	}
-
-	
-
-	
-
 }
