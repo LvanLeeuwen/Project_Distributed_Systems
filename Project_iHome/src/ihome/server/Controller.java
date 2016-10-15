@@ -13,6 +13,8 @@ import org.apache.avro.ipc.specific.SpecificResponder;
 
 import ihome.proto.serverside.ServerProto;
 
+import org.json.*;
+
 
 public class Controller implements ServerProto 
 {
@@ -25,16 +27,29 @@ public class Controller implements ServerProto
 	@Override
 	public CharSequence connect(int device_type) throws AvroRemoteException {
 		
+		JSONObject jout = new JSONObject();
+		
 		if(device_type < 0 || device_type >= nr_types)
 		{
-			return "{\"UID\" : NULL, \"Error\" : \"[Error] No such type defined.\"}";
+			try {
+				jout.put("UID", JSONObject.NULL);
+				jout.put("Error", "[Error] No such type defined.");
+				
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			return jout.toString();
 		}
 		
 		try{
 			uidmap.put(Integer.toString(nextID), new Device(device_type));
 			if(device_type == 1)
 				sensormap.put(Integer.toString(nextID), new ArrayList<Float>());
-			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
+			
+			jout.put("UID", nextID++);
+			jout.put("Error", JSONObject.NULL);
+			return jout.toString();
 		}catch(Exception e){
 			return "{\"UID\" : NULL, \"Error\" : \"[Error] " + e.getMessage();
 		}
@@ -116,6 +131,15 @@ public class Controller implements ServerProto
 	}
 	
 	public static void main(String [] args){
-		Controller.runServer();
+		Controller c = new Controller();
+		try {
+			c.connect(2);
+			c.connect(1);
+			
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		//Controller.runServer();
 	}
 }
