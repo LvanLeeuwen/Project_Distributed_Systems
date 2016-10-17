@@ -41,7 +41,7 @@ public class Controller implements ServerProto
 	}
 
 	@Override
-	public CharSequence disconnect(CharSequence uid) throws AvroRemoteException {
+	public CharSequence disconnect(int uid) throws AvroRemoteException {
 		
 		if(!uidmap.containsKey(uid))
 		{
@@ -57,7 +57,7 @@ public class Controller implements ServerProto
 	}
 	
 	@Override
-	public CharSequence update_temperature(CharSequence uid, float value) throws AvroRemoteException {
+	public CharSequence update_temperature(int uid, float value) throws AvroRemoteException {
 		if(!uidmap.containsKey(uid)) {
 			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
 		}
@@ -75,13 +75,13 @@ public class Controller implements ServerProto
 	
 
 	@Override
-	public CharSequence get_temperature_list(CharSequence uid, CharSequence sensor_id) throws AvroRemoteException {
+	public CharSequence get_temperature_list(int uid, int sensor_id) throws AvroRemoteException {
 		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
-	public CharSequence get_temperature_current(CharSequence uid) throws AvroRemoteException {
+	public CharSequence get_temperature_current(int uid) throws AvroRemoteException {
 		// TODO Auto-generated method stub
 		return null;
 	}
