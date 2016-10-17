@@ -8,20 +8,20 @@ package ihome.proto.serverside;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public interface ServerProto {
-  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"ServerProto\",\"namespace\":\"ihome.proto.serverside\",\"types\":[],\"messages\":{\"connect\":{\"request\":[{\"name\":\"device_type\",\"type\":\"int\"}],\"response\":\"string\"},\"disconnect\":{\"request\":[{\"name\":\"uid\",\"type\":\"string\"}],\"response\":\"string\"},\"update_temperature\":{\"request\":[{\"name\":\"uid\",\"type\":\"string\"},{\"name\":\"value\",\"type\":\"float\"}],\"response\":\"string\"},\"get_temperature_list\":{\"request\":[{\"name\":\"uid\",\"type\":\"string\"},{\"name\":\"sensor_id\",\"type\":\"string\"}],\"response\":\"string\"},\"get_temperature_current\":{\"request\":[{\"name\":\"uid\",\"type\":\"string\"}],\"response\":\"string\"}}}");
+  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"ServerProto\",\"namespace\":\"ihome.proto.serverside\",\"types\":[],\"messages\":{\"connect\":{\"request\":[{\"name\":\"device_type\",\"type\":\"int\"}],\"response\":\"string\"},\"disconnect\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"}],\"response\":\"string\"},\"update_temperature\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"},{\"name\":\"value\",\"type\":\"float\"}],\"response\":\"string\"},\"get_temperature_list\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"},{\"name\":\"sensor_id\",\"type\":\"int\"}],\"response\":\"string\"},\"get_temperature_current\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"}],\"response\":\"string\"}}}");
   java.lang.CharSequence connect(int device_type) throws org.apache.avro.AvroRemoteException;
-  java.lang.CharSequence disconnect(java.lang.CharSequence uid) throws org.apache.avro.AvroRemoteException;
-  java.lang.CharSequence update_temperature(java.lang.CharSequence uid, float value) throws org.apache.avro.AvroRemoteException;
-  java.lang.CharSequence get_temperature_list(java.lang.CharSequence uid, java.lang.CharSequence sensor_id) throws org.apache.avro.AvroRemoteException;
-  java.lang.CharSequence get_temperature_current(java.lang.CharSequence uid) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence disconnect(int uid) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence update_temperature(int uid, float value) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence get_temperature_list(int uid, int sensor_id) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence get_temperature_current(int uid) throws org.apache.avro.AvroRemoteException;
 
   @SuppressWarnings("all")
   public interface Callback extends ServerProto {
     public static final org.apache.avro.Protocol PROTOCOL = ihome.proto.serverside.ServerProto.PROTOCOL;
     void connect(int device_type, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
-    void disconnect(java.lang.CharSequence uid, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
-    void update_temperature(java.lang.CharSequence uid, float value, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
-    void get_temperature_list(java.lang.CharSequence uid, java.lang.CharSequence sensor_id, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
-    void get_temperature_current(java.lang.CharSequence uid, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void disconnect(int uid, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void update_temperature(int uid, float value, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void get_temperature_list(int uid, int sensor_id, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void get_temperature_current(int uid, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
   }
 }
