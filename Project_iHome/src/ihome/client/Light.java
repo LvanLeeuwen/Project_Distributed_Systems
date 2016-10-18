@@ -2,7 +2,6 @@ package ihome.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 
 import org.apache.avro.ipc.SaslSocketTransceiver;
 import org.apache.avro.ipc.Transceiver;
@@ -12,22 +11,21 @@ import org.json.JSONObject;
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
 
-public class Fridge {
+public class Light {
 	
 	private Controller controller = new Controller();
-	private static Transceiver fridge;
+	private static Transceiver light;
 	private static ServerProto proxy;
 
 	private String name;
 	private static int nextName = 0;
 	private int ID;
-	private boolean opened = false;
-	private ArrayList<String> items = new ArrayList<String>();
+	private String state = "off";
 	
 	public static void connect_to_server() {
 		try {
-			fridge = new SaslSocketTransceiver(new InetSocketAddress(6789));
-			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
+			light = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
 			System.out.println("Connected to server");
 		} catch (IOException e) {
 			System.err.println("[error] failed to connect to server");
@@ -38,64 +36,42 @@ public class Fridge {
 	
 	public void add_to_house() {
 		try {
-			CharSequence response = proxy.connect(2);
+			CharSequence response = proxy.connect(3);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
-			name = "fridge" + nextName++;
+			name = "light" + nextName++;
 			System.out.println("name: " + name + " ID: " + ID);
 		} catch (Exception e){
 			System.out.println(e.getMessage());
 		}
 	}
 	
-	public void open() {
-		opened = true;
-	}
-	
-	public void close() {
-		opened = false;
-	}
-	
-	public void print_items() {
-		for (String item : items) {
-			System.out.println(item);
+	public void switch_state() {
+		if (state == "on") {
+			state = "off";
+			System.out.println("Light " + name + " with ID " + ID + " is switched off.");
+		} else {
+			state = "on";
+			System.out.println("Light " + name + " with ID " + ID + " is switched on.");
 		}
 	}
 	
-	public ArrayList<String> get_items() {
-		return items;
-	}
-	
-	public void add_item(String name) {
-		if (items.contains(name)) {
-			name += "0";
-		}
-		items.add(name);
-	}
-	
-	public void remove_item(String name) {
-		items.remove(name);
-		if (items.isEmpty()) {
-			/* 
-			 * Notify controller that fridge is empty.
-			 * Controller should notify all users that fridge is empty.
-			 */
-		}
+	public String get_state() {
+		return state;
 	}
 	
 	public static void main(String[] args) {
 		// Connect to server
-		Fridge.connect_to_server();
-		Fridge myFridge = new Fridge();
-		myFridge.add_to_house();
+		Light.connect_to_server();
+		Light myLight = new Light();
+		myLight.add_to_house();
 		while (true) {
 			// execute actions from command line
 			/*
 			 * Possible actions:
-			 * 		Print a list of items stored in the fridge.
-			 * 		Return a list of all items stored in the fridge.
-			 * 		Add or remove an item to or from the fridge.
+			 * 		Switch state
+			 * 		Ask for current state
 			 */
 		}
 	}
