@@ -17,8 +17,8 @@ import ihome.proto.serverside.ServerProto;
 public class Controller implements ServerProto 
 {
 	
-	private Map<String, Device> uidmap = new HashMap<String, Device>();
-	private Map<String, ArrayList<Float>> sensormap = new HashMap<String, ArrayList<Float>>();
+	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
+	private Map<Integer, ArrayList<Float>> sensormap = new HashMap<Integer, ArrayList<Float>>();
 	private int nextID = 0;
 	private final int nr_types = 4;
 
@@ -31,9 +31,9 @@ public class Controller implements ServerProto
 		}
 		
 		try{
-			uidmap.put(Integer.toString(nextID), new Device(device_type));
+			uidmap.put(nextID, new Device(device_type));
 			if(device_type == 1)
-				sensormap.put(Integer.toString(nextID), new ArrayList<Float>());
+				sensormap.put(nextID, new ArrayList<Float>());
 			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"UID\" : NULL, \"Error\" : \"[Error] " + e.getMessage();
@@ -65,6 +65,8 @@ public class Controller implements ServerProto
 			return "{\"Error\" : \"[Error] Device with uid " + uid +  " is not heat sensor.\"}";
 		}
 		try{
+			this.sensormap.get(uid).add(value);
+			return "{\"Error\" : NULL}";
 
 		}catch (Exception e){
 
@@ -76,20 +78,49 @@ public class Controller implements ServerProto
 
 	@Override
 	public CharSequence get_temperature_list(int uid, int sensor_id) throws AvroRemoteException {
-		// TODO Auto-generated method stub
+		if(!uidmap.containsKey(sensor_id)) {
+			return "{\"Error\" : \"[Error] sensor_id not found in current session.\"}";
+		}
+		else if(!uidmap.containsKey(uid)){
+			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
+		}
+		else if(!sensormap.containsKey(sensor_id)){
+			return "{\"Error\" : \"[Error] Device with uid " + uid +  " is not heat sensor.\"}";
+		}
+		try{
+			return this.sensormap.get(sensor_id).toString();
+
+		}catch (Exception e){
+
+		}
 		return null;
 	}
 
 	@Override
 	public CharSequence get_temperature_current(int uid) throws AvroRemoteException {
-		// TODO Auto-generated method stub
+		if(!uidmap.containsKey(uid)) {
+			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
+		}
+		
+		try{
+			double mean = 0.0;
+			int n = 0;
+			for(ArrayList<Float>  c : this.sensormap.values()){
+				n++;
+				mean += c.get(c.size() - 1);
+			}
+			return Double.toString(mean/n);
+
+		}catch (Exception e){
+
+		}
 		return null;
 	}
 	
 	
 	public void printInSession(){
 		System.out.println("Currently in session:");
-		for(String id : uidmap.keySet())
+		for(int id : uidmap.keySet())
 		{
 			System.out.print(id + " ");
 		}
@@ -116,6 +147,27 @@ public class Controller implements ServerProto
 	}
 	
 	public static void main(String [] args){
-		Controller.runServer();
+		//Controller.runServer();
+		
+		Controller c = new Controller();
+		try {
+			System.out.println(c.connect(1));
+			System.out.println(c.connect(1));
+			System.out.println(c.connect(0));
+			
+			System.out.println(c.update_temperature(0, 0.0f));
+			System.out.println(c.update_temperature(0, 5.0f));
+			System.out.println(c.update_temperature(1, 1.0f));
+			System.out.println(c.update_temperature(1, 5.0f));
+			System.out.println(c.update_temperature(1, 3.0f));
+			
+			System.out.println(c.get_temperature_list(3, 1));
+			System.out.println(c.get_temperature_current(2));
+			
+			
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
