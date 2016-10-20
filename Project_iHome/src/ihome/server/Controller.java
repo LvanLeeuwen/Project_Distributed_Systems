@@ -40,8 +40,6 @@ public class Controller implements ServerProto
 			if(device_type == 1)
 				sensormap.put(nextID, new ArrayList<Float>());
 			System.out.println("Device connected with id " + nextID);
-			System.out.println("uidmap size: " + uidmap.size());
-			printInSession();
 			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"UID\" : NULL, \"Error\" : \"[Error] " + e.getMessage();
@@ -174,6 +172,23 @@ public class Controller implements ServerProto
 		}
 	}
 	
+	public void switch_state(int uid){
+		Device light = uidmap.get(uid);
+		if (light.type != 3) {
+			// TODO error
+			return;
+		}
+		try {
+			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
+			LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
+			CharSequence state = proxy.switch_state();
+			System.out.println(state);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static void main(String [] args){
 		Controller controller = new Controller();
 		controller.runServer();
@@ -183,19 +198,27 @@ public class Controller implements ServerProto
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get in-session list");
 			System.out.println("2) Get state light");
+			System.out.println("3) Switch state light");
 			
 			int in = reader.nextInt();
 			if(in == 1){
 				controller.printInSession();
 				
 			}
-			/*
+			
 			else if(in ==2){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				controller.get_light_state(id);
 			}
-			*/
+			
+			else if(in ==3){
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				controller.switch_state(id);
+				
+			}
+			
 			else{
 				break;
 			}

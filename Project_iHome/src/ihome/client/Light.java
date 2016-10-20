@@ -66,8 +66,8 @@ public class Light implements LightProto {
 	public void runServer() {
 		try
 		{
-			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
-					new Controller()), new InetSocketAddress(6790+ID));
+			server = new SaslSocketServer(new SpecificResponder(LightProto.class,
+					this), new InetSocketAddress(6790+ID));
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
@@ -90,11 +90,12 @@ public class Light implements LightProto {
 		// Connect to server
 		Light myLight = new Light();
 		myLight.connect_to_server();
-		/*
+		
+		myLight.runServer();
 		while(true){
 			int a;
 		}
-		*/
+		
 		//myLight.stopServer();
 	}
 
