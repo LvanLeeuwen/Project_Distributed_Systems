@@ -1,0 +1,13 @@
+{ "namespace" : "ihome.proto.lightside",
+	"protocol" : "LightProto",
+	"messages" : {
+		"send_state" : {
+			"request" : [],
+			"response" : "string"
+		},
+		"switch_state" : {
+			"request" : [],
+			"response" : "string"
+		}
+	}
+}
