@@ -15,35 +15,28 @@ import ihome.server.Controller;
 public class User {
 	
 	private Controller controller = new Controller();
-	private static Transceiver user;
-	private static ServerProto proxy;
+	private Transceiver user;
+	private ServerProto proxy;
 	
 	private String name;
-	private static int nextName = 0;
+	private int nextName = 0;
 	private int ID;
 	
-	public static void connect_to_server() {
+	public void connect_to_server() {
 		try {
 			user = new SaslSocketTransceiver(new InetSocketAddress(6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
 			System.out.println("Connected to server");
-		} catch (IOException e) {
-			System.err.println("[error] failed to connect to server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-		}
-	}
-	
-	public void enter() {
-		try {
 			CharSequence response = proxy.connect(0);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
 			name = "user" + nextName++;
 			System.out.println("username: " + name + " ID: " + ID + " Entered the house");
-		} catch (Exception e){
-			System.out.println(e.getMessage());
+		} catch (Exception e) {
+			System.err.println("[error] failed to connect to server");
+			e.printStackTrace(System.err);
+			System.exit(1);
 		}
 	}
 	
@@ -60,9 +53,8 @@ public class User {
 
 	public static void main(String[] args) {
 		// Connect to server
-		User.connect_to_server();
 		User myUser = new User();
-		myUser.enter();
+		myUser.connect_to_server();
 		while (true) {
 			// execute actions from command line
 			

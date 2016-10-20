@@ -20,37 +20,29 @@ public class Light implements LightProto {
 	
 	private Server server = null;
 	private Controller controller = new Controller();
-	private static Transceiver light;
-	private static ServerProto proxy;
+	private Transceiver light;
+	private ServerProto proxy;
 
 	private String name;
-	private static int nextName = 0;
+	private int nextName = 0;
 	private int ID;
 	private String state = "off";
 	
-	public static void connect_to_server() {
+	public void connect_to_server() {
 		try {
 			light = new SaslSocketTransceiver(new InetSocketAddress(6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
 			System.out.println("Connected to server");
-		} catch (IOException e) {
-			System.err.println("[error] failed to connect to server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-		}
-	}
-	
-	public void add_to_house() {
-		try {
 			CharSequence response = proxy.connect(3);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
 			name = "light" + nextName++;
 			System.out.println("name: " + name + " ID: " + ID);
-			runServer();
-		} catch (Exception e){
-			System.out.println(e.getMessage());
+		} catch (Exception e) {
+			System.err.println("[error] failed to connect to server");
+			e.printStackTrace(System.err);
+			System.exit(1);
 		}
 	}
 	
@@ -96,13 +88,13 @@ public class Light implements LightProto {
 	
 	public static void main(String[] args) {
 		// Connect to server
-		Light.connect_to_server();
 		Light myLight = new Light();
-		myLight.add_to_house();
+		myLight.connect_to_server();
+		/*
 		while(true){
 			int a;
 		}
-		
+		*/
 		//myLight.stopServer();
 	}
 

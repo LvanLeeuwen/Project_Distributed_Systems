@@ -36,11 +36,12 @@ public class Controller implements ServerProto
 		}
 		
 		try{
-			System.out.println("Entering registry");
 			uidmap.put(nextID, new Device(device_type));
-			System.out.println("uidmap size: " + uidmap.size());
 			if(device_type == 1)
 				sensormap.put(nextID, new ArrayList<Float>());
+			System.out.println("Device connected with id " + nextID);
+			System.out.println("uidmap size: " + uidmap.size());
+			printInSession();
 			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"UID\" : NULL, \"Error\" : \"[Error] " + e.getMessage();
@@ -126,7 +127,7 @@ public class Controller implements ServerProto
 	
 	
 	public void printInSession(){
-		System.out.println("Currently in session("+ this.uidmap.size()+ ":");
+		System.out.println("Currently in session("+ this.uidmap.size()+ "):");
 		for(int id : uidmap.keySet())
 		{
 			System.out.print(id + " ");
@@ -138,12 +139,11 @@ public class Controller implements ServerProto
 		try
 		{
 			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
-					new Controller()), new InetSocketAddress(6789));
+					this), new InetSocketAddress(6789));
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
 			System.exit(1);
-
 		}
 		server.start();
 	}
@@ -177,6 +177,7 @@ public class Controller implements ServerProto
 	public static void main(String [] args){
 		Controller controller = new Controller();
 		controller.runServer();
+
 		while(true){
 			Scanner reader = new Scanner(System.in);
 			System.out.println("What do you want to do?");
@@ -188,15 +189,18 @@ public class Controller implements ServerProto
 				controller.printInSession();
 				
 			}
+			/*
 			else if(in ==2){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				controller.get_light_state(id);
 			}
+			*/
 			else{
 				break;
 			}
 		}
+
 		//controller.get_light_state(0);
 		controller.stopServer();
 	}
