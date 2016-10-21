@@ -3,17 +3,25 @@ package ihome.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 
+import org.apache.avro.AvroRemoteException;
+import org.apache.avro.ipc.SaslSocketServer;
 import org.apache.avro.ipc.SaslSocketTransceiver;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.avro.ipc.specific.SpecificResponder;
+import org.apache.avro.ipc.Server;
 import org.json.JSONObject;
 
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
+import ihome.proto.fridgeside.FridgeProto;
+import ihome.proto.lightside.LightProto;
 
-public class Fridge {
+public class Fridge implements FridgeProto {
 	
+	private Server server = null;
 	private Controller controller = new Controller();
 	private Transceiver fridge;
 	private ServerProto proxy;
@@ -23,6 +31,7 @@ public class Fridge {
 	private int ID;
 	private boolean opened = false;
 	private ArrayList<String> items = new ArrayList<String>();
+	private ArrayList<String> allItems = new ArrayList<String>();
 	
 	public void connect_to_server() {
 		try {
@@ -77,10 +86,45 @@ public class Fridge {
 		}
 	}
 	
+	@Override
+	public CharSequence send_current_items() throws AvroRemoteException {
+		return Arrays.toString(items.toArray());
+	}
+
+	@Override
+	public CharSequence send_all_items() throws AvroRemoteException {
+		return Arrays.toString(allItems.toArray());
+	}
+
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
+					this), new InetSocketAddress(6790+ID));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static void main(String[] args) {
 		// Connect to server
 		Fridge myFridge = new Fridge();
 		myFridge.connect_to_server();
+		
+		myFridge.runServer();
 		while (true) {
 			// execute actions from command line
 			/*
@@ -91,5 +135,4 @@ public class Fridge {
 			 */
 		}
 	}
-
 }

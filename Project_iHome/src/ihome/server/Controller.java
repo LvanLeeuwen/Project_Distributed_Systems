@@ -2,6 +2,7 @@ package ihome.server;
 
 import ihome.proto.serverside.ServerProto;
 import ihome.proto.lightside.LightProto;
+import ihome.proto.fridgeside.FridgeProto;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -189,6 +190,23 @@ public class Controller implements ServerProto
 		}
 	}
 	
+	public void get_fridge_contents(int uid) {
+		Device fridge = uidmap.get(uid);
+		if (fridge.type != 2) {
+			// TODO error
+			return;
+		}
+		try {
+			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
+			FridgeProto proxy = SpecificRequestor.getClient(FridgeProto.class, trans);
+			CharSequence contents = proxy.send_current_items();
+			System.out.println(contents);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static void main(String [] args){
 		Controller controller = new Controller();
 		controller.runServer();
@@ -199,27 +217,24 @@ public class Controller implements ServerProto
 			System.out.println("1) Get in-session list");
 			System.out.println("2) Get state light");
 			System.out.println("3) Switch state light");
+			System.out.println("4) Get contents fridge");
 			
 			int in = reader.nextInt();
 			if(in == 1){
 				controller.printInSession();
-				
-			}
-			
-			else if(in ==2){
+			} else if(in ==2){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				controller.get_light_state(id);
-			}
-			
-			else if(in ==3){
+			} else if(in ==3){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				controller.switch_state(id);
-				
-			}
-			
-			else{
+			} else if (in == 4) {
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				controller.get_fridge_contents(id);
+			} else {
 				break;
 			}
 		}

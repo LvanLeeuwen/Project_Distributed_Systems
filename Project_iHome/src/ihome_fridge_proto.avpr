@@ -1,0 +1,13 @@
+{ "namespace" : "ihome.proto.fridgeside",
+	"protocol" : "FridgeProto",
+	"messages" : {
+		"send_current_items" : {
+			"request" : [],
+			"response" : "string"
+		},
+		"send_all_items" : {
+			"request" : [],
+			"response" : "string"
+		}
+	}
+}
