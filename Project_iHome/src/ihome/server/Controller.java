@@ -207,6 +207,23 @@ public class Controller implements ServerProto
 		}
 	}
 	
+	public void get_all_fridge_contents(int uid) {
+		Device fridge = uidmap.get(uid);
+		if (fridge.type != 2) {
+			// TODO error
+			return;
+		}
+		try {
+			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
+			FridgeProto proxy = SpecificRequestor.getClient(FridgeProto.class, trans);
+			CharSequence contents = proxy.send_all_items();
+			System.out.println(contents);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 	public static void main(String [] args){
 		Controller controller = new Controller();
 		controller.runServer();
@@ -218,6 +235,7 @@ public class Controller implements ServerProto
 			System.out.println("2) Get state light");
 			System.out.println("3) Switch state light");
 			System.out.println("4) Get contents fridge");
+			System.out.println("5) Get current en removed contents fridge");
 			
 			int in = reader.nextInt();
 			if(in == 1){
@@ -234,6 +252,10 @@ public class Controller implements ServerProto
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				controller.get_fridge_contents(id);
+			} else if (in == 5) {
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				controller.get_all_fridge_contents(id);
 			} else {
 				break;
 			}
