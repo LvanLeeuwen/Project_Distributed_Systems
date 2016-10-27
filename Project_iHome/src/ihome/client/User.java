@@ -2,11 +2,12 @@ package ihome.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Scanner;
 
+import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketTransceiver;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
-
 import org.json.*;
 
 import ihome.proto.serverside.ServerProto;
@@ -56,11 +57,8 @@ public class User {
 		User myUser = new User();
 		myUser.connect_to_server();
 		while (true) {
-			// execute actions from command line
-			
 			/*
 			 * Possible actions:
-			 * 		Enter the system (connect to server)
 			 * 		Exit the system (disconnect from server)
 			 * 		Ask controller for list of all devices and other users
 			 * 		Ask controller for overview of the state of all the lights
@@ -72,6 +70,77 @@ public class User {
 			 * 		Ask controller for current temperature in the house.
 			 * 		Ask controller for history of temperature in the house.
 			 */
+			Scanner reader = new Scanner(System.in);
+			System.out.println("What do you want to do?");
+			System.out.println("1) Get list of all devices and users");
+			System.out.println("2) Get overview of the state of all the lights");
+			System.out.println("3) Switch state light");
+			System.out.println("4) Get contents fridge");
+			System.out.println("5) Get current temperature");
+			System.out.println("6) Get history of temperature");
+			
+			int in = reader.nextInt();
+			if(in == 1){		// Get list of all devices and users.
+				try {
+					CharSequence devices = myUser.proxy.get_all_devices();
+					System.out.println(devices);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if(in ==2){	// Get overview of the state of all the lights.
+				try {
+					CharSequence result = myUser.proxy.get_lights_state();
+					System.out.println(result);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if(in ==3){	// Switch state light
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					CharSequence result = myUser.proxy.switch_state_light(id);
+					System.out.println(result);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 4) {	// Get contents fridge.
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					CharSequence result = myUser.proxy.get_fridge_contents(id);
+					System.out.println(result);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 5) {	// Get current temperature.
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					CharSequence result = myUser.proxy.get_temperature_current(id);
+					System.out.println(result);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 6) { // Get history of temperature
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					CharSequence result = myUser.proxy.get_temperature_list(id, id);
+					System.out.println(result);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				break;
+			}
+			
+			
 		}
 	}
 
