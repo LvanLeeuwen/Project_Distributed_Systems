@@ -73,6 +73,7 @@ public class Controller implements ServerProto
 		}
 		try{
 			this.sensormap.get(uid).add(value);
+			System.out.println("Temp ontvangen en toegevoegd");
 			return "{\"Error\" : NULL}";
 
 		}catch (Exception e){
