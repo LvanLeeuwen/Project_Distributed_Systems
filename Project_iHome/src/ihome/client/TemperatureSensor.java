@@ -52,11 +52,14 @@ public class TemperatureSensor {
 	}
 	
 	public void sent_temperature() {
+		// Calculate new temperature
 		float rangeMin = -1.0f;
 		float rangeMax = 1.0f;
 		Random r = new Random();
 		float value = rangeMin + (rangeMax - rangeMin) * r.nextFloat();
 		temperature += value;
+		
+		// Try to send the new temperature to the server
 		try {
 			if (unsendTemperatures.isEmpty()) {
 				proxy.update_temperature(ID, temperature, future);
@@ -68,6 +71,7 @@ public class TemperatureSensor {
 					System.out.println("Verzonden");
 				}
 			} else {
+				// Send all unsent temperatures.
 				unsendTemperatures.add(temperature);
 				for (float temp : unsendTemperatures) {
 					proxy.update_temperature(ID, temp, future);
@@ -77,14 +81,10 @@ public class TemperatureSensor {
 						System.out.println("Error: " + error);
 					} else {
 						System.out.println("Verzonden unsend");
+						unsendTemperatures.remove(temp);
 					}
 				}
 			}
-			
-		} catch (IOException e) {
-			System.out.println("IOException");
-		} catch (InterruptedException e) {
-			System.out.println("InterruptedException");
 		} catch (ExecutionException e) {
 			if (unsendTemperatures.isEmpty()) {
 				unsendTemperatures.add(temperature);
@@ -92,8 +92,11 @@ public class TemperatureSensor {
 			} else {
 				e.printStackTrace();
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		} catch (Exception e) {
-			System.out.println("Exception");
 			e.printStackTrace();
 		}
 	}
