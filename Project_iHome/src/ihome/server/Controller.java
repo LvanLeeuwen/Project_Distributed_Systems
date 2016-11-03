@@ -191,7 +191,7 @@ public class Controller implements ServerProto
 		System.out.println("Currently in session("+ this.uidmap.size()+ "):");
 		for(int id : uidmap.keySet())
 		{
-			System.out.println(id + " " + uidmap.get(id).is_online);
+			System.out.println(id + " " +  Boolean.toString(uidmap.get(id).is_online));
 		}
 		System.out.print("\n");
 	}
@@ -286,12 +286,19 @@ public class Controller implements ServerProto
 	@Override
 	public int i_am_alive(int uid) throws AvroRemoteException {
 		
-	//	System.out.println("I AM ALIVE MESSAGE FROM " + uid + " RECEIVED!! JEEJ");
+		
 		this.uidalive.put(uid, true);
-				return 0;
+				
+	
+	    return 0;
 	}
 	
 	public void check_alive(){
+		
+		
+	  
+	    
+	    
 		for(int i : this.uidalive.keySet()){
 			this.uidmap.get(i).is_online = this.uidalive.get(i);
 			this.uidalive.put(i, false);
@@ -323,12 +330,15 @@ public class Controller implements ServerProto
 			
 			int in = reader.nextInt();
 			if(in == 1){
-				try {
-					System.out.println(controller.get_all_devices());
+				
+				controller.printInSession();
+				/*try {
+					controller.printInSession();
+					//System.out.println(controller.get_all_devices());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
+				}*/
 			} /*else if(in ==2){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
