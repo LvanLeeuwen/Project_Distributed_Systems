@@ -35,11 +35,13 @@ public class Controller implements ServerProto
 	private Timer timer;
 	private AliveResponder ar;
 	
+	public static final int check_alive_interval = 1000;
+	
 	public Controller(){
 		timer = new Timer();
 		ar = new AliveResponder(this);
 		
-		timer.scheduleAtFixedRate(ar, 3000, 3000);
+		timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
 		
 	}
 

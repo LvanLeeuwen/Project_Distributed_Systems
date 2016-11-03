@@ -19,7 +19,7 @@ import ihome.server.Controller;
 
 public class User {
 	
-	final static int wtna = 1000; 
+	final static int wtna = Controller.check_alive_interval / 3; 
 	
 	private Controller controller = new Controller();
 	private Transceiver user;
