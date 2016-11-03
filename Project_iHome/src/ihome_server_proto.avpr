@@ -9,6 +9,10 @@
 			"request" : [{"name" : "uid", "type" : "int"}],
 			"response" : "string"
 		},
+		"get_all_devices" : {
+			"request" : [],
+			"response" : "string"
+		},
 		"update_temperature" : {
 			"request" : [{"name" : "uid", "type" : "int"}, {"name" : "value", "type" : "float"}],
 			"response" : "string"
@@ -18,6 +22,18 @@
 			"response" : "string"
 		},
 		"get_temperature_current" : {
+			"request" : [{"name" : "uid", "type" : "int" }],
+			"response" : "string"
+		},
+		"get_lights_state" : {
+			"request" : [],
+			"response" : "string"
+		},
+		"switch_state_light" : {
+			"request" : [{"name" : "uid", "type" : "int" }],
+			"response" : "string"
+		},
+		"get_fridge_contents" : {
 			"request" : [{"name" : "uid", "type" : "int" }],
 			"response" : "string"
 		}				

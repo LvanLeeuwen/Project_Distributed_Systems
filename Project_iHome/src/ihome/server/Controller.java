@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -28,6 +29,9 @@ public class Controller implements ServerProto
 	private int nextID = 0;
 	private final int nr_types = 4;
 
+	
+	/* Server related */
+	
 	@Override
 	public CharSequence connect(int device_type) throws AvroRemoteException {
 		
@@ -63,6 +67,46 @@ public class Controller implements ServerProto
 		
 	}
 	
+	public void runServer(){
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
+					this), new InetSocketAddress(6789));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	
+	/* All devices */
+	
+	@Override
+	public CharSequence get_all_devices() throws AvroRemoteException {
+		CharSequence inSession = "Currently in session("+ this.uidmap.size()+ "):\n";
+		for(int id : uidmap.keySet())
+		{
+			int type = uidmap.get(id).type;
+			inSession = inSession.toString() + id + " " + type + "\n";
+		}
+		inSession = inSession.toString() + "\n";
+		return inSession;
+	}
+	
+	
+	/* Temperature sensor */
+	
 	@Override
 	public CharSequence update_temperature(int uid, float value) throws AvroRemoteException {
 		if(!uidmap.containsKey(uid)) {
@@ -80,8 +124,6 @@ public class Controller implements ServerProto
 		}
 		return null;
 	}
-
-	
 
 	@Override
 	public CharSequence get_temperature_list(int uid, int sensor_id) throws AvroRemoteException {
@@ -123,88 +165,68 @@ public class Controller implements ServerProto
 		}
 		return null;
 	}
-	
-	
-	public void printInSession(){
-		System.out.println("Currently in session("+ this.uidmap.size()+ "):");
-		for(int id : uidmap.keySet())
-		{
-			System.out.print(id + " ");
-		}
-		System.out.print("\n");
-	}
 
-	public void runServer(){
-		try
-		{
-			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
-					this), new InetSocketAddress(6789));
-		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-		}
-		server.start();
-	}
 	
-	public void stopServer() {
-		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
+	/* Light */
 	
-	public void get_light_state(int uid) {
-		Device light = uidmap.get(uid);
-		if (light.type != 3) {
-			// TODO error
-			return;
-		}
+	@Override
+	public CharSequence get_lights_state() throws AvroRemoteException {
 		try {
-			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
-			LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
-			CharSequence state = proxy.send_state();
-			System.out.println(state);
+			CharSequence lights = "";
+			for (Map.Entry<Integer, Device> entry : uidmap.entrySet()) {
+				Integer key = entry.getKey();
+				Device device = entry.getValue();
+				if (device.type == 3) {
+					Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+key));
+					LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
+					CharSequence state = proxy.send_state();
+					lights = lights.toString() + key + " " + state + "\n";
+				}
+			}
+			return lights;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return null;
 	}
 	
-	public void switch_state(int uid){
+	@Override
+	public CharSequence switch_state_light(int uid) throws AvroRemoteException {
 		Device light = uidmap.get(uid);
 		if (light.type != 3) {
-			// TODO error
-			return;
+			return "{\"Switched\" : false, \"Error\" : \"[Error] light_id not found in current session.\"}";
 		}
 		try {
 			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
 			LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
 			CharSequence state = proxy.switch_state();
-			System.out.println(state);
+			return "{\"Switched\" : true, \"Error\" : NULL}";
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return null;
 	}
 	
-	public void get_fridge_contents(int uid) {
+	
+	/* Fridge */
+	@Override
+	public CharSequence get_fridge_contents(int uid) throws AvroRemoteException {
 		Device fridge = uidmap.get(uid);
 		if (fridge.type != 2) {
-			// TODO error
-			return;
+			return "{\"Contents\" : NULL, \"Error\" : \"[Error] fridge_id not found in current session.\"}";
 		}
 		try {
 			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
 			FridgeProto proxy = SpecificRequestor.getClient(FridgeProto.class, trans);
 			CharSequence contents = proxy.send_current_items();
-			System.out.println(contents);
+			return "{\"Contents\" : contents, \"Error\" : NULL}";
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return null;
 	}
 	
 	public void get_all_fridge_contents(int uid) {
@@ -224,6 +246,8 @@ public class Controller implements ServerProto
 		}
 	}
 	
+	
+	/* Main */
 	public static void main(String [] args){
 		Controller controller = new Controller();
 		controller.runServer();
@@ -232,26 +256,46 @@ public class Controller implements ServerProto
 			Scanner reader = new Scanner(System.in);
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get in-session list");
-			System.out.println("2) Get state light");
+			//System.out.println("2) Get state light");
 			System.out.println("3) Switch state light");
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current en removed contents fridge");
 			
 			int in = reader.nextInt();
 			if(in == 1){
-				controller.printInSession();
-			} else if(in ==2){
+				try {
+					System.out.println(controller.get_all_devices());
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} /*else if(in ==2){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
-				controller.get_light_state(id);
-			} else if(in ==3){
+				try {
+					controller.get_light_state(id);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} */else if(in ==3){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
-				controller.switch_state(id);
+				try {
+					controller.switch_state_light(id);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else if (in == 4) {
 				System.out.println("Give id:");
 				int id = reader.nextInt();
-				controller.get_fridge_contents(id);
+				try {
+					controller.get_fridge_contents(id);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else if (in == 5) {
 				System.out.println("Give id:");
 				int id = reader.nextInt();

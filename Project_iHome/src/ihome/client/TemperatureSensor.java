@@ -66,9 +66,9 @@ public class TemperatureSensor {
 		temperature += value;
 		try {
 			proxy.update_temperature(ID, temperature, future);
-			System.out.println(future.get());
+			//System.out.println(future.get());
 			//System.out.println(response);
-		} catch (IOException | InterruptedException | ExecutionException e) {
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
