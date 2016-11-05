@@ -6,6 +6,8 @@ import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
+import java.util.Arrays;
+import java.util.ArrayList;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketTransceiver;
@@ -19,36 +21,27 @@ import ihome.server.Controller;
 
 public class TemperatureSensor {
 
-	private Controller controller = new Controller();
+	// Variables to set up a connection with the server.
 	private Transceiver sensor;
-	//private ServerProto proxy;
 	private ServerProto.Callback proxy;
 	private CallFuture<CharSequence> future = new CallFuture<CharSequence>();
 	
-	private String name;
-	private int nextName = 0;
+	// Variables specifically for the temperature sensor
 	private int ID;
+	private String name;
 	private float temperature;
+	private ArrayList<Float> unsendTemperatures = new ArrayList<Float>();
 	
 	public void connect_to_server(float initTemp) {
 		try {
-			/*
-			Hello.Callback proxy = SpecificRequestor.getClient(Hello.Callback.class, client);
-			CallFuture<CharSequence> future = new CallFuture<CharSequence>();
-			proxy.sayHello("Bob", future);
-			System.out.println(future.get());
-			client.close();
-			*/
-			
 			sensor = new SaslSocketTransceiver(new InetSocketAddress(6789));
-			//proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
 			System.out.println("Connected to server");
 			CharSequence response = proxy.connect(1);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
-			name = "sensor" + nextName++;
+			name = "sensor" + ID;
 			temperature = initTemp;
 			System.out.println("name: " + name + " ID: " + ID);
 		} catch (Exception e) {
@@ -59,17 +52,51 @@ public class TemperatureSensor {
 	}
 	
 	public void sent_temperature() {
+		// Calculate new temperature
 		float rangeMin = -1.0f;
 		float rangeMax = 1.0f;
 		Random r = new Random();
 		float value = rangeMin + (rangeMax - rangeMin) * r.nextFloat();
 		temperature += value;
+		
+		// Try to send the new temperature to the server
 		try {
-			proxy.update_temperature(ID, temperature, future);
-			//System.out.println(future.get());
-			//System.out.println(response);
+			if (unsendTemperatures.isEmpty()) {
+				proxy.update_temperature(ID, temperature, future);
+				JSONObject json = new JSONObject(future.get().toString());
+				if (!json.isNull("Error")) {
+					CharSequence error = json.getString("Error");
+					System.out.println("Error: " + error);
+				} else {
+					System.out.println("Verzonden");
+				}
+			} else {
+				// Send all unsent temperatures.
+				unsendTemperatures.add(temperature);
+				for (float temp : unsendTemperatures) {
+					proxy.update_temperature(ID, temp, future);
+					JSONObject json = new JSONObject(future.get().toString());
+					if (!json.isNull("Error")) {
+						CharSequence error = json.getString("Error");
+						System.out.println("Error: " + error);
+					} else {
+						System.out.println("Verzonden unsend");
+						unsendTemperatures.remove(temp);
+					}
+				}
+			}
+		} catch (ExecutionException e) {
+			if (unsendTemperatures.isEmpty()) {
+				unsendTemperatures.add(temperature);
+				System.out.println("Toegevoegd aan unsend");
+			} else {
+				e.printStackTrace();
+			}
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}

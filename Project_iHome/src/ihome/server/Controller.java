@@ -327,6 +327,7 @@ public class Controller implements ServerProto
 			System.out.println("3) Switch state light");
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current en removed contents fridge");
+			System.out.println("6) Get temperature list");
 			
 			int in = reader.nextInt();
 			if(in == 1){
@@ -370,6 +371,15 @@ public class Controller implements ServerProto
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				controller.get_all_fridge_contents(id);
+			} else if (in == 6) {
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					System.out.println(controller.get_temperature_list(id, id));
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else {
 				break;
 			}
