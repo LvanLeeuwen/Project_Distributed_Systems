@@ -3,7 +3,8 @@ package ihome.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Scanner;
-
+import java.util.Timer;
+import java.util.TimerTask;
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketTransceiver;
 import org.apache.avro.ipc.Transceiver;
@@ -13,7 +14,12 @@ import org.json.*;
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
 
+
+
+
 public class User {
+	
+	final static int wtna = Controller.check_alive_interval / 3; 
 	
 	private Controller controller = new Controller();
 	private Transceiver user;
@@ -22,6 +28,12 @@ public class User {
 	private String name;
 	private int nextName = 0;
 	private int ID;
+	
+	
+	private AliveCaller ac;
+	
+	private Timer timer;
+	
 	
 	public void connect_to_server() {
 		try {
@@ -34,10 +46,28 @@ public class User {
 			ID = json.getInt("UID");
 			name = "user" + nextName++;
 			System.out.println("username: " + name + " ID: " + ID + " Entered the house");
+			
+			timer = new Timer();
+			ac = new AliveCaller(this);
+			
+			timer.scheduleAtFixedRate(ac, wtna, wtna);
+			
+			
+			
+			
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
 			e.printStackTrace(System.err);
 			System.exit(1);
+		}
+	}
+	
+	public void send_alive(){
+		try {
+			proxy.i_am_alive(this.ID);
+		} catch (AvroRemoteException e) {
+			System.err.println("[error] failed to send I'm alive");
+			e.printStackTrace();
 		}
 	}
 	
@@ -57,6 +87,7 @@ public class User {
 		User myUser = new User();
 		myUser.connect_to_server();
 		while (true) {
+
 			/*
 			 * Possible actions:
 			 * 		Exit the system (disconnect from server)

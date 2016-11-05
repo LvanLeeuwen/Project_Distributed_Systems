@@ -25,6 +25,7 @@
 			"request" : [{"name" : "uid", "type" : "int" }],
 			"response" : "string"
 		},
+
 		"get_lights_state" : {
 			"request" : [],
 			"response" : "string"
@@ -36,6 +37,13 @@
 		"get_fridge_contents" : {
 			"request" : [{"name" : "uid", "type" : "int" }],
 			"response" : "string"
-		}				
+		},				
+
+		"i_am_alive" : {
+			"request" : [{"name": "uid", "type" : "int" }],
+			"response" : "int"
+		}		
+		
+
 	}
 }

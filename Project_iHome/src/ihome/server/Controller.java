@@ -1,6 +1,7 @@
 package ihome.server;
 
 import ihome.proto.serverside.ServerProto;
+import ihome.client.AliveCaller;
 import ihome.proto.lightside.LightProto;
 import ihome.proto.fridgeside.FridgeProto;
 
@@ -11,6 +12,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Timer;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -26,8 +28,22 @@ public class Controller implements ServerProto
 	private static Server server = null;
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
 	private Map<Integer, ArrayList<Float>> sensormap = new HashMap<Integer, ArrayList<Float>>();
+	private Map<Integer, Boolean> uidalive = new HashMap<Integer, Boolean>();
 	private int nextID = 0;
 	private final int nr_types = 4;
+	
+	private Timer timer;
+	private AliveResponder ar;
+	
+	public static final int check_alive_interval = 1000;
+	
+	public Controller(){
+		timer = new Timer();
+		ar = new AliveResponder(this);
+		
+		timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
+		
+	}
 
 	
 	/* Server related */
@@ -44,6 +60,9 @@ public class Controller implements ServerProto
 			uidmap.put(nextID, new Device(device_type));
 			if(device_type == 1)
 				sensormap.put(nextID, new ArrayList<Float>());
+			else if(device_type == 0){
+				uidalive.put(nextID, true);
+			}
 			System.out.println("Device connected with id " + nextID);
 			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
 		}catch(Exception e){
@@ -167,6 +186,18 @@ public class Controller implements ServerProto
 	}
 
 	
+	
+	public void printInSession(){
+		System.out.println("Currently in session("+ this.uidmap.size()+ "):");
+		for(int id : uidmap.keySet())
+		{
+			System.out.println(id + " " +  Boolean.toString(uidmap.get(id).is_online));
+		}
+		System.out.print("\n");
+	}
+
+
+	
 	/* Light */
 	
 	@Override
@@ -246,9 +277,45 @@ public class Controller implements ServerProto
 		}
 	}
 	
+
 	
-	/* Main */
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
+	
+	@Override
+	public int i_am_alive(int uid) throws AvroRemoteException {
+		
+		
+		this.uidalive.put(uid, true);
+				
+	
+	    return 0;
+	}
+	
+	public void check_alive(){
+		
+		
+	  
+	    
+	    
+		for(int i : this.uidalive.keySet()){
+			this.uidmap.get(i).is_online = this.uidalive.get(i);
+			this.uidalive.put(i, false);
+		}
+	}
+	
+	
+	
+	
+	
+	
+	
+
 	public static void main(String [] args){
+		
+		
+		
 		Controller controller = new Controller();
 		controller.runServer();
 
@@ -263,12 +330,15 @@ public class Controller implements ServerProto
 			
 			int in = reader.nextInt();
 			if(in == 1){
-				try {
-					System.out.println(controller.get_all_devices());
+				
+				controller.printInSession();
+				/*try {
+					controller.printInSession();
+					//System.out.println(controller.get_all_devices());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
-				}
+				}*/
 			} /*else if(in ==2){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
@@ -308,4 +378,6 @@ public class Controller implements ServerProto
 		//controller.get_light_state(0);
 		controller.stopServer();
 	}
+
+	
 }
