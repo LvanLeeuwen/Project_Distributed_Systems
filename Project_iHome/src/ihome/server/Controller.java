@@ -493,5 +493,21 @@ public class Controller implements ServerProto
 		controller.stopServer();
 	}
 
-	
+
+	/*********************
+	 ** FRIGDE FUNTIONS **
+	 *********************/
+	@Override
+	public CharSequence get_fridge_port(int uid) throws AvroRemoteException {
+		if(!this.uidmap.containsKey(uid))
+			return "{\"socket\" : NULL}";
+		
+		if(this.uidmap.get(uid).type == 2)
+			return "{\"socket\" : " + (uid + 6790) + "}";
+		
+		else{
+			return "{\"socket\" : NULL}";
+		}
+	}
+
 }

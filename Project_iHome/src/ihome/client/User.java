@@ -97,6 +97,7 @@ public class User implements UserProto {
 		}
 	}
 	
+
 	/******************************
 	 ** CONTROLLER FUNCTIONALITY **
 	 ******************************/
@@ -131,6 +132,77 @@ public class User implements UserProto {
 		}
 	}
 
+	
+	/*********************
+	 ** Fridge conntect **
+	 *********************
+	 */
+	
+	private int getPort(int uid){
+		try {
+			CharSequence response = proxy.get_fridge_port(uid);
+			JSONObject json = new JSONObject(response.toString());
+			if (!json.isNull("socket"))
+				return json.getInt("socket");
+			else
+				return -1;
+			
+		} catch (AvroRemoteException | JSONException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return -1;
+	}
+	
+	public void connectToFridge(int fridgeid) 
+	{
+		int port = getPort(fridgeid);
+		
+		if(port == -1)
+		{
+			System.out.println("[Error] Couldn't connect to fridge.");
+			return;
+		}
+		
+		try {
+			System.out.println(port);
+			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(port));
+			FridgeProto fridgeproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, user);
+			
+			while(true){
+				Scanner reader = new Scanner(System.in);
+				System.out.println("What do you want to do?");
+				System.out.println("1) Add item to fridge(" + fridgeid + ")");
+				System.out.println("2) Show current items in fride");
+				System.out.println("3) Exit");
+				int in = reader.nextInt();
+				if(in == 1){		// Get list of all devices and users.
+					System.out.println("What do you want to add to the fridge?");
+					String item = reader.nextLine();
+					
+				} else if(in == 2){	// Get overview of the state of all the lights.
+					
+					System.out.println(fridgeproxy.send_current_items());
+				} else if(in == 3){
+					break;
+				}
+				
+			}
+			
+			
+			
+			
+			
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		
+	}
+	
+
 	public static void main(String[] args) {
 		Scanner reader = new Scanner(System.in);
 		System.out.println("What is your IP address?");
@@ -147,7 +219,7 @@ public class User implements UserProto {
 			 * 		Exit the system (disconnect from server)
 			 * 		Ask controller for list of all devices and other users
 			 * 		Ask controller for overview of the state of all the lights
-			 * 		Ask controller to switch specific light to another state
+			 * 		Ask controller to switch specif@param argsic light to another state
 			 * 		Ask controller for overview of inventory of a fridge
 			 * 		Ask controller to open a fridge 
 			 * 		Ask opened fridge to add/remove items.
@@ -162,7 +234,12 @@ public class User implements UserProto {
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current temperature");
 			System.out.println("6) Get history of temperature");
-			System.out.println("7) Show my controllers devices");
+
+			
+
+			System.out.println("7) Start connection with Fridge");
+			System.out.println("8) Show my controllers devices");
+
 			
 			int in = reader.nextInt();
 			if(in == 1){		// Get list of all devices and users.
@@ -221,13 +298,20 @@ public class User implements UserProto {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-			} else if (in == 7) {
+
+			} else if (in == 8) {
 				try {
 					System.out.println(myUser.controller.get_all_devices());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+
+			} else if(in == 7){
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				myUser.connectToFridge(id);
+
 			} else {
 				break;
 			}

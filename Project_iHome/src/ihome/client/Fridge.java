@@ -134,7 +134,8 @@ public class Fridge implements FridgeProto {
 	
 	@Override
 	public CharSequence send_current_items() throws AvroRemoteException {
-		return Arrays.toString(items.toArray());
+		return "test";
+	//	return Arrays.toString(items.toArray());
 	}
 
 	@Override

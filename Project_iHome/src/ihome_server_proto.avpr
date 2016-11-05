@@ -42,8 +42,12 @@
 		"i_am_alive" : {
 			"request" : [{"name": "uid", "type" : "int" }],
 			"response" : "int"
-		}		
-		
+		},		
+				
+		"get_fridge_port" :{
+			"request" : [{"name" : "uid", "type" : "int" }],
+			"response" : "string"
+		}				
 
 	}
 }
