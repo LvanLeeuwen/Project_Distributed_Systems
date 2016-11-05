@@ -134,7 +134,7 @@ public class User implements UserProto {
 
 	
 	/*********************
-	 ** Fridge conntect **
+	 ** Fridge connect **
 	 *********************
 	 */
 	
@@ -167,19 +167,20 @@ public class User implements UserProto {
 		try {
 			System.out.println(port);
 			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(port));
-			FridgeProto fridgeproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, user);
+			FridgeProto fridgeproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, fridge);
 			
 			while(true){
 				Scanner reader = new Scanner(System.in);
 				System.out.println("What do you want to do?");
 				System.out.println("1) Add item to fridge(" + fridgeid + ")");
-				System.out.println("2) Show current items in fride");
+				System.out.println("2) Show current items in fridge");
 				System.out.println("3) Exit");
 				int in = reader.nextInt();
 				if(in == 1){		// Get list of all devices and users.
+					reader.nextLine(); // Consume newline left-over
 					System.out.println("What do you want to add to the fridge?");
 					String item = reader.nextLine();
-					
+					// TODO add item
 				} else if(in == 2){	// Get overview of the state of all the lights.
 					
 					System.out.println(fridgeproxy.send_current_items());
