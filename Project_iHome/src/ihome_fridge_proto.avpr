@@ -8,6 +8,10 @@
 		"send_all_items" : {
 			"request" : [],
 			"response" : "string"
+		},
+		"update_controller" : {
+			"request" : [{"name" : "jsonController", "type" : "string"}],
+			"response" : "string"
 		}
 	}
 }

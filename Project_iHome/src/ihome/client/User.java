@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
+
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketTransceiver;
 import org.apache.avro.ipc.Transceiver;
@@ -13,11 +14,9 @@ import org.json.*;
 
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
+import ihome.proto.userside.UserProto;
 
-
-
-
-public class User {
+public class User implements UserProto {
 	
 	final static int wtna = Controller.check_alive_interval / 3; 
 	
@@ -51,10 +50,7 @@ public class User {
 			ac = new AliveCaller(this);
 			
 			timer.scheduleAtFixedRate(ac, wtna, wtna);
-			
-			
-			
-			
+	
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
 			e.printStackTrace(System.err);
@@ -80,6 +76,16 @@ public class User {
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
 		}
+	}
+	
+	/******************************
+	 ** CONTROLLER FUNCTIONALITY **
+	 ******************************/
+	
+	@Override
+	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
+		controller.updateController(jsonController);
+		return "";
 	}
 
 	public static void main(String[] args) {

@@ -33,6 +33,10 @@ public class Fridge implements FridgeProto {
 	private ArrayList<String> items = new ArrayList<String>();
 	private ArrayList<String> allItems = new ArrayList<String>();
 	
+	
+	/**************************
+	 ** SERVER FUNCTIONALITY **
+	 **************************/
 	public void connect_to_server() {
 		try {
 			fridge = new SaslSocketTransceiver(new InetSocketAddress(6789));
@@ -51,6 +55,32 @@ public class Fridge implements FridgeProto {
 		}
 	}
 	
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
+					this), new InetSocketAddress(6790+ID));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	/**************************
+	 ** FRIDGE FUNCTIONALITY **
+	 **************************/
 	public void open() {
 		opened = true;
 	}
@@ -59,6 +89,9 @@ public class Fridge implements FridgeProto {
 		opened = false;
 	}
 	
+	/**************************
+	 ** ITEMS FUNCTIONALITY  **
+	 **************************/
 	public void print_items() {
 		for (String item : items) {
 			System.out.println(item);
@@ -95,30 +128,20 @@ public class Fridge implements FridgeProto {
 	public CharSequence send_all_items() throws AvroRemoteException {
 		return Arrays.toString(allItems.toArray());
 	}
-
-	public void runServer() {
-		try
-		{
-			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
-					this), new InetSocketAddress(6790+ID));
-		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-
-		}
-		server.start();
+	
+	/******************************
+	 ** CONTROLLER FUNCTIONALITY **
+	 ******************************/
+	
+	@Override
+	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
+		controller.updateController(jsonController);
+		return "";
 	}
 	
-	public void stopServer() {
-		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
+	/**************************
+	 ** MAIN FUNCTIONALITY   **
+	 **************************/
 	public static void main(String[] args) {
 		// Connect to server
 		Fridge myFridge = new Fridge();

@@ -67,9 +67,7 @@ public class TemperatureSensor {
 				if (!json.isNull("Error")) {
 					CharSequence error = json.getString("Error");
 					System.out.println("Error: " + error);
-				} else {
-					System.out.println("Verzonden");
-				}
+				} 
 			} else {
 				// Send all unsent temperatures.
 				unsendTemperatures.add(temperature);

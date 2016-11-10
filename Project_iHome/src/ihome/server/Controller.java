@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
+import org.json.*;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -46,7 +47,9 @@ public class Controller implements ServerProto
 	}
 
 	
-	/* Server related */
+	/**************************
+	 ** SERVER FUNCTIONALITY **
+	 **************************/
 	
 	@Override
 	public CharSequence connect(int device_type) throws AvroRemoteException {
@@ -108,8 +111,91 @@ public class Controller implements ServerProto
 		}
 	}
 
-	
-	/* All devices */
+	public void sendController() {
+		try {
+			// Create JSON object
+			JSONObject json = new JSONObject();
+			json.put("nextID", nextID);
+			json.put("sensormap", sensormap);
+			json.put("uidalive", uidalive);
+			/*
+			 * uidmap:
+			 * each device has a type and an online value
+			 */
+			JSONObject jsonuidmap = new JSONObject();
+			for (int id : uidmap.keySet()) {
+				Device value = uidmap.get(id);
+				Map<String, Integer> device = new HashMap<String, Integer>();
+				device.put("type", value.type);
+				device.put("is_online", value.is_online ? 1 : 0);
+				jsonuidmap.put(String.valueOf(id), device);
+			}
+			json.put("uidmap", jsonuidmap);
+			System.out.println(json.toString());
+			
+			// Send json
+			for (int id : uidmap.keySet()) {
+				int type = uidmap.get(id).type;
+				if (type == 0) {
+					// Send me to user
+					
+				} else if (type == 2) {
+					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
+					CharSequence response = fridgeproxy.update_controller(json.toString());
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	public void updateController(CharSequence jsonController) {
+		try {
+			JSONObject json = new JSONObject(jsonController.toString());
+			
+			nextID = json.getInt("nextID");
+			
+			uidmap.clear();
+			JSONObject jsonuidmap = json.getJSONObject("uidmap");
+			Iterator<String> keys = jsonuidmap.keys();
+			while (keys.hasNext()) {
+				int id = Integer.parseInt(keys.next());
+				JSONObject devices = jsonuidmap.getJSONObject(keys.next());
+				int type = devices.getInt("type");
+				boolean online = devices.getBoolean("is_online");
+				uidmap.put(id, new Device(type, online));
+			}
+			sensormap.clear();
+			JSONObject jsonsensormap = json.getJSONObject("sensormap");
+			keys = jsonsensormap.keys();
+			while (keys.hasNext()) {
+				int id = Integer.parseInt(keys.next());
+				ArrayList<Float> sensordata = new ArrayList<Float>();
+				JSONArray jArray = jsonsensormap.getJSONArray(keys.next());
+				if (jArray != null) {
+					for (int i = 0; i < jArray.length(); i++) {
+						sensordata.add((float)jArray.getDouble(i));
+					}
+				}
+				sensormap.put(id, sensordata);
+			}
+			uidalive.clear();
+			JSONObject jsonuidalive = json.getJSONObject("uidalive");
+			keys = jsonuidalive.keys();
+			while (keys.hasNext()) {
+				int id = Integer.parseInt(keys.next());
+				boolean alive = jsonuidalive.getBoolean(keys.next());
+				uidalive.put(id, alive);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	/**************************
+	 ** DEVICE FUNCTIONALITY **
+	 **************************/
 	
 	@Override
 	public CharSequence get_all_devices() throws AvroRemoteException {
@@ -124,7 +210,9 @@ public class Controller implements ServerProto
 	}
 	
 	
-	/* Temperature sensor */
+	/**************************
+	 ** SENSOR FUNCTIONALITY **
+	 **************************/
 	
 	@Override
 	public CharSequence update_temperature(int uid, float value) throws AvroRemoteException {
@@ -198,7 +286,9 @@ public class Controller implements ServerProto
 
 
 	
-	/* Light */
+	/*************************
+	 ** LIGHT FUNCTIONALITY **
+	 *************************/
 	
 	@Override
 	public CharSequence get_lights_state() throws AvroRemoteException {
@@ -241,7 +331,9 @@ public class Controller implements ServerProto
 	}
 	
 	
-	/* Fridge */
+	/**************************
+	 ** FRIDGE FUNCTIONALITY **
+	 **************************/
 	@Override
 	public CharSequence get_fridge_contents(int uid) throws AvroRemoteException {
 		Device fridge = uidmap.get(uid);
@@ -285,20 +377,11 @@ public class Controller implements ServerProto
 	
 	@Override
 	public int i_am_alive(int uid) throws AvroRemoteException {
-		
-		
 		this.uidalive.put(uid, true);
-				
-	
-	    return 0;
+		return 0;
 	}
 	
 	public void check_alive(){
-		
-		
-	  
-	    
-	    
 		for(int i : this.uidalive.keySet()){
 			this.uidmap.get(i).is_online = this.uidalive.get(i);
 			this.uidalive.put(i, false);
@@ -306,15 +389,11 @@ public class Controller implements ServerProto
 	}
 	
 	
+	/*************************
+	 ** MAIN FUNCTION       **
+	 *************************/
 	
-	
-	
-	
-	
-
 	public static void main(String [] args){
-		
-		
 		
 		Controller controller = new Controller();
 		controller.runServer();
@@ -328,6 +407,7 @@ public class Controller implements ServerProto
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current en removed contents fridge");
 			System.out.println("6) Get temperature list");
+			System.out.println("7) send controller");
 			
 			int in = reader.nextInt();
 			if(in == 1){
@@ -380,6 +460,8 @@ public class Controller implements ServerProto
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+			} else if (in == 7) {
+				controller.sendController();
 			} else {
 				break;
 			}
