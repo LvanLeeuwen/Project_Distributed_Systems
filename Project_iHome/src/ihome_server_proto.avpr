@@ -45,9 +45,19 @@
 		},		
 				
 		"get_fridge_port" :{
-			"request" : [{"name" : "uid", "type" : "int" }],
+			"request" : [{"name" : "uid", "type" : "int" }, {"name" : "fridgeid", "type" : "int"}],
 			"response" : "string"
-		}				
+
+		},
+		"release_fridge" :{
+			"request": [{"name" : "uid", "type": "int"}],
+			"response": "int"		
+		},
+		"report_offline" :{
+			"request": [{"name" : "uid", "type": "int"}],
+			"response": "int"
+		}
+						
 
 	}
 }

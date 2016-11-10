@@ -8,10 +8,12 @@ package ihome.proto.fridgeside;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public interface FridgeProto {
-  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"FridgeProto\",\"namespace\":\"ihome.proto.fridgeside\",\"types\":[],\"messages\":{\"send_current_items\":{\"request\":[],\"response\":\"string\"},\"send_all_items\":{\"request\":[],\"response\":\"string\"},\"update_controller\":{\"request\":[{\"name\":\"jsonController\",\"type\":\"string\"}],\"response\":\"string\"}}}");
+  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"FridgeProto\",\"namespace\":\"ihome.proto.fridgeside\",\"types\":[],\"messages\":{\"send_current_items\":{\"request\":[],\"response\":\"string\"},\"send_all_items\":{\"request\":[],\"response\":\"string\"},\"update_controller\":{\"request\":[{\"name\":\"jsonController\",\"type\":\"string\"}],\"response\":\"string\"},\"add_item\":{\"request\":[{\"name\":\"item\",\"type\":\"string\"}],\"response\":\"string\"},\"remove_item\":{\"request\":[{\"name\":\"item\",\"type\":\"string\"}],\"response\":\"string\"}}}");
   java.lang.CharSequence send_current_items() throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence send_all_items() throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence update_controller(java.lang.CharSequence jsonController) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence add_item(java.lang.CharSequence item) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence remove_item(java.lang.CharSequence item) throws org.apache.avro.AvroRemoteException;
 
   @SuppressWarnings("all")
   public interface Callback extends FridgeProto {
@@ -19,5 +21,7 @@ public interface FridgeProto {
     void send_current_items(org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
     void send_all_items(org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
     void update_controller(java.lang.CharSequence jsonController, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void add_item(java.lang.CharSequence item, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void remove_item(java.lang.CharSequence item, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
   }
 }

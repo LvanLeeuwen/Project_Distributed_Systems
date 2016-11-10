@@ -12,6 +12,14 @@
 		"update_controller" : {
 			"request" : [{"name" : "jsonController", "type" : "string"}],
 			"response" : "string"
+		},
+		"add_item" : {
+			"request" : [{"name" : "item", "type" : "string"}],
+			"response" : "string"
+		},
+		"remove_item" : {
+			"request" : [{"name" : "item", "type" : "string"}],
+			"response" : "string"
 		}
 	}
 }

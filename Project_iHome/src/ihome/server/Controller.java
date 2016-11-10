@@ -498,16 +498,36 @@ public class Controller implements ServerProto
 	 ** FRIGDE FUNTIONS **
 	 *********************/
 	@Override
-	public CharSequence get_fridge_port(int uid) throws AvroRemoteException {
-		if(!this.uidmap.containsKey(uid))
+	public CharSequence get_fridge_port(int uid, int fridgeid) throws AvroRemoteException {
+		if(!this.uidmap.containsKey(fridgeid))
 			return "{\"socket\" : NULL}";
 		
-		if(this.uidmap.get(uid).type == 2)
-			return "{\"socket\" : " + (uid + 6790) + "}";
+		if(!this.uidmap.get(fridgeid).is_online){
+			return "{\"socket\" : NULL, \"Error\" : \"[Error] Fridge is offline.\"}";
+		}
 		
+		if(this.uidmap.get(fridgeid).has_local_connect > 0)
+			return "{\"socket\" : NULL, \"Error\" : \"[Error] fridge already in use.\"}";
+				
+		
+		if(this.uidmap.get(fridgeid).type == 2){
+			this.uidmap.get(fridgeid).has_local_connect = 1;
+			return "{\"socket\" : " + (fridgeid + 6790) + "}";
+		}
 		else{
 			return "{\"socket\" : NULL}";
 		}
 	}
 
+	@Override
+	public int release_fridge(int uid) throws AvroRemoteException {
+		this.uidmap.get(uid).has_local_connect = -1;
+		return 0;
+	}
+
+	@Override
+	public int report_offline(int uid) throws AvroRemoteException {
+		this.uidmap.get(uid).is_online = false;
+		return 0;
+	}
 }
