@@ -115,6 +115,7 @@ public class User implements UserProto {
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current temperature");
 			System.out.println("6) Get history of temperature");
+			System.out.println("7) Show my controllers devices");
 			
 			int in = reader.nextInt();
 			if(in == 1){		// Get list of all devices and users.
@@ -169,6 +170,13 @@ public class User implements UserProto {
 				try {
 					CharSequence result = myUser.proxy.get_temperature_list(id, id);
 					System.out.println(result);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 7) {
+				try {
+					System.out.println(myUser.controller.get_all_devices());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

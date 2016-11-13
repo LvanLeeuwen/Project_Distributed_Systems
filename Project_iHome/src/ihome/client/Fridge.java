@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -135,8 +136,7 @@ public class Fridge implements FridgeProto {
 	
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		controller.updateController(jsonController);
-		return "";
+		return controller.updateController(jsonController);
 	}
 	
 	/**************************
@@ -156,6 +156,22 @@ public class Fridge implements FridgeProto {
 			 * 		Return a list of all items stored in the fridge.
 			 * 		Add or remove an item to or from the fridge.
 			 */
+			
+			Scanner reader = new Scanner(System.in);
+			System.out.println("What do you want to do?");
+			System.out.println("1) Get my controllers devices");
+			
+			int in = reader.nextInt();
+			if(in == 1){
+				try {
+					System.out.println(myFridge.controller.get_all_devices());
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				break;
+			}
 		}
 	}
 }

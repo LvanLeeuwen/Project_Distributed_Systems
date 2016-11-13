@@ -4,6 +4,7 @@ import ihome.proto.serverside.ServerProto;
 import ihome.client.AliveCaller;
 import ihome.proto.lightside.LightProto;
 import ihome.proto.fridgeside.FridgeProto;
+import ihome.proto.userside.UserProto;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -111,7 +112,7 @@ public class Controller implements ServerProto
 		}
 	}
 
-	public void sendController() {
+	public CharSequence sendController() {
 		try {
 			// Create JSON object
 			JSONObject json = new JSONObject();
@@ -131,26 +132,33 @@ public class Controller implements ServerProto
 				jsonuidmap.put(String.valueOf(id), device);
 			}
 			json.put("uidmap", jsonuidmap);
-			System.out.println(json.toString());
 			
 			// Send json
 			for (int id : uidmap.keySet()) {
 				int type = uidmap.get(id).type;
 				if (type == 0) {
 					// Send me to user
-					
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+					CharSequence response = userproxy.update_controller(json.toString());
+					return response;
 				} else if (type == 2) {
+					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
 					CharSequence response = fridgeproxy.update_controller(json.toString());
+					System.out.println(response);
+					return response;
 				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
+			return "sendController" + e.toString();
 		}
+		return "sendController finished";
 	}
 
-	public void updateController(CharSequence jsonController) {
+	public CharSequence updateController(CharSequence jsonController) {
 		try {
 			JSONObject json = new JSONObject(jsonController.toString());
 			
@@ -160,19 +168,21 @@ public class Controller implements ServerProto
 			JSONObject jsonuidmap = json.getJSONObject("uidmap");
 			Iterator<String> keys = jsonuidmap.keys();
 			while (keys.hasNext()) {
-				int id = Integer.parseInt(keys.next());
-				JSONObject devices = jsonuidmap.getJSONObject(keys.next());
+				String nextKey = keys.next();
+				int id = Integer.parseInt(nextKey);
+				JSONObject devices = jsonuidmap.getJSONObject(nextKey);
 				int type = devices.getInt("type");
-				boolean online = devices.getBoolean("is_online");
+				boolean online = devices.getInt("is_online") == 1 ? true : false;
 				uidmap.put(id, new Device(type, online));
 			}
 			sensormap.clear();
 			JSONObject jsonsensormap = json.getJSONObject("sensormap");
 			keys = jsonsensormap.keys();
 			while (keys.hasNext()) {
-				int id = Integer.parseInt(keys.next());
+				String nextKey = keys.next();
+				int id = Integer.parseInt(nextKey);
 				ArrayList<Float> sensordata = new ArrayList<Float>();
-				JSONArray jArray = jsonsensormap.getJSONArray(keys.next());
+				JSONArray jArray = jsonsensormap.getJSONArray(nextKey);
 				if (jArray != null) {
 					for (int i = 0; i < jArray.length(); i++) {
 						sensordata.add((float)jArray.getDouble(i));
@@ -184,14 +194,16 @@ public class Controller implements ServerProto
 			JSONObject jsonuidalive = json.getJSONObject("uidalive");
 			keys = jsonuidalive.keys();
 			while (keys.hasNext()) {
-				int id = Integer.parseInt(keys.next());
-				boolean alive = jsonuidalive.getBoolean(keys.next());
+				String nextKey = keys.next();
+				int id = Integer.parseInt(nextKey);
+				boolean alive = jsonuidalive.getBoolean(nextKey);
 				uidalive.put(id, alive);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-		}
-		
+			return "updateController" + e.toString();
+		}		
+		return "updateController Finished";
 	}
 	/**************************
 	 ** DEVICE FUNCTIONALITY **
@@ -461,7 +473,7 @@ public class Controller implements ServerProto
 					e.printStackTrace();
 				}
 			} else if (in == 7) {
-				controller.sendController();
+				System.out.println(controller.sendController());
 			} else {
 				break;
 			}
