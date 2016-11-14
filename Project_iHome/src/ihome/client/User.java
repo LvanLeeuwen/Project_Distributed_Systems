@@ -7,11 +7,15 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import org.apache.avro.AvroRemoteException;
+import org.apache.avro.ipc.SaslSocketServer;
 import org.apache.avro.ipc.SaslSocketTransceiver;
+import org.apache.avro.ipc.Server;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.avro.ipc.specific.SpecificResponder;
 import org.json.*;
 
+import ihome.proto.fridgeside.FridgeProto;
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
 import ihome.proto.userside.UserProto;
@@ -21,6 +25,7 @@ public class User implements UserProto {
 	final static int wtna = Controller.check_alive_interval / 3; 
 	
 	private Controller controller = new Controller();
+	private Server server = null;
 	private Transceiver user;
 	private ServerProto proxy;
 	
@@ -87,10 +92,35 @@ public class User implements UserProto {
 		controller.updateController(jsonController);
 		return "";
 	}
+	
+	
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(UserProto.class,
+					this), new InetSocketAddress(6790+ID));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public static void main(String[] args) {
 		// Connect to server
 		User myUser = new User();
+		myUser.runServer();
 		myUser.connect_to_server();
 		while (true) {
 

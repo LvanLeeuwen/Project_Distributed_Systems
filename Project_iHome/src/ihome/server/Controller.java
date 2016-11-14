@@ -138,6 +138,7 @@ public class Controller implements ServerProto
 				int type = uidmap.get(id).type;
 				if (type == 0) {
 					// Send me to user
+				
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
