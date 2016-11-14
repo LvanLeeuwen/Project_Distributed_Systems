@@ -1,0 +1,9 @@
+{ "namespace" : "ihome.proto.userside",
+	"protocol" : "UserProto",
+	"messages" : {
+		"update_controller" : {
+			"request" : [{"name" : "jsonController", "type" : "string"}],
+			"response" : "string"
+		}
+	}
+}

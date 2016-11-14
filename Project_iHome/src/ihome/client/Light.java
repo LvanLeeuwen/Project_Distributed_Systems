@@ -19,7 +19,6 @@ import ihome.proto.lightside.LightProto;
 public class Light implements LightProto {
 	
 	private Server server = null;
-	private Controller controller = new Controller();
 	private Transceiver light;
 	private ServerProto proxy;
 

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -33,6 +34,10 @@ public class Fridge implements FridgeProto {
 	private ArrayList<String> items = new ArrayList<String>();
 	private ArrayList<String> allItems = new ArrayList<String>();
 	
+	
+	/**************************
+	 ** SERVER FUNCTIONALITY **
+	 **************************/
 	public void connect_to_server() {
 		try {
 			fridge = new SaslSocketTransceiver(new InetSocketAddress(6789));
@@ -51,6 +56,32 @@ public class Fridge implements FridgeProto {
 		}
 	}
 	
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
+					this), new InetSocketAddress(6790+ID));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	/**************************
+	 ** FRIDGE FUNCTIONALITY **
+	 **************************/
 	public void open() {
 		opened = true;
 	}
@@ -59,6 +90,9 @@ public class Fridge implements FridgeProto {
 		opened = false;
 	}
 	
+	/**************************
+	 ** ITEMS FUNCTIONALITY  **
+	 **************************/
 	public void print_items() {
 		for (String item : items) {
 			System.out.println(item);
@@ -95,30 +129,19 @@ public class Fridge implements FridgeProto {
 	public CharSequence send_all_items() throws AvroRemoteException {
 		return Arrays.toString(allItems.toArray());
 	}
-
-	public void runServer() {
-		try
-		{
-			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
-					this), new InetSocketAddress(6790+ID));
-		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-
-		}
-		server.start();
+	
+	/******************************
+	 ** CONTROLLER FUNCTIONALITY **
+	 ******************************/
+	
+	@Override
+	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
+		return controller.updateController(jsonController);
 	}
 	
-	public void stopServer() {
-		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
+	/**************************
+	 ** MAIN FUNCTIONALITY   **
+	 **************************/
 	public static void main(String[] args) {
 		// Connect to server
 		Fridge myFridge = new Fridge();
@@ -133,6 +156,22 @@ public class Fridge implements FridgeProto {
 			 * 		Return a list of all items stored in the fridge.
 			 * 		Add or remove an item to or from the fridge.
 			 */
+			
+			Scanner reader = new Scanner(System.in);
+			System.out.println("What do you want to do?");
+			System.out.println("1) Get my controllers devices");
+			
+			int in = reader.nextInt();
+			if(in == 1){
+				try {
+					System.out.println(myFridge.controller.get_all_devices());
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				break;
+			}
 		}
 	}
 }

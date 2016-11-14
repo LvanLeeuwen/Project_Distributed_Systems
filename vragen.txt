@@ -1,0 +1,8 @@
+Kunnen we void returnen met Avro?
+Mogen de IP adressen hardcoded zijn?
+Moet de controller ook bijhouden of een light, temperature sensor of fridge uitvalt?
+Als een fridge geopent is, mag de user dan ook een lijst van items opvragen?
+Hoe een connectie met device sluiten?
+
+Onthouden:
+Controller moet bijhouden wie met welke fridge is verbonden, zodat als de user uitvalt, de controller de fridge sluit.
