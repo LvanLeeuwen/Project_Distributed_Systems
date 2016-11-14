@@ -56,6 +56,11 @@
 		"report_offline" :{
 			"request": [{"name" : "uid", "type": "int"}],
 			"response": "int"
+		},
+		
+		"notify_empty_fridge" :{
+			"request": [{"name" : "uid", "type": "int"}],
+			"response": "int"
 		}
 						
 

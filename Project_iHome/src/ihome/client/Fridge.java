@@ -194,6 +194,8 @@ public class Fridge implements FridgeProto {
 	@Override
 	public CharSequence remove_item(CharSequence item) throws AvroRemoteException {
 		this.items.remove(item);
+		if(this.items.isEmpty())
+		proxy.notify_empty_fridge(this.ID);
 		// TODO Auto-generated method stub
 		return "test";
 	}
