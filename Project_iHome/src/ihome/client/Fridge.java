@@ -33,8 +33,8 @@ public class Fridge implements FridgeProto {
 	private String IPAddress;
 	private String server_ip_address;
 	private boolean opened = false;
-	private ArrayList<String> items = new ArrayList<String>();
-	private ArrayList<String> allItems = new ArrayList<String>();
+	private ArrayList<CharSequence> items = new ArrayList<CharSequence>();
+	private ArrayList<CharSequence> allItems = new ArrayList<CharSequence>();
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -106,34 +106,22 @@ public class Fridge implements FridgeProto {
 	 ** ITEMS FUNCTIONALITY  **
 	 **************************/
 	public void print_items() {
-		for (String item : items) {
+		for (CharSequence item : items) {
 			System.out.println(item);
 		}
 	}
 	
-	public ArrayList<String> get_items() {
+	public ArrayList<CharSequence> get_items() {
 		return items;
 	}
 	
-	public void add_item(String name) {
-		if (items.contains(name)) {
-			name += "0";
-		}
-		items.add(name);
-	}
 	
-	public void remove_item(String name) {
-		items.remove(name);
-		if (items.isEmpty()) {
-			/* 
-			 * Notify controller that fridge is empty.
-			 * Controller should notify all users that fridge is empty.
-			 */
-		}
-	}
+	
+	
 	
 	@Override
 	public CharSequence send_current_items() throws AvroRemoteException {
+	//	return "test";
 		return Arrays.toString(items.toArray());
 	}
 
@@ -189,5 +177,26 @@ public class Fridge implements FridgeProto {
 				break;
 			}
 		}
+	}
+
+	@Override
+	public CharSequence add_item(CharSequence item) throws AvroRemoteException {
+		
+		
+		if (items.contains(item)) {
+			item = item +  "0";
+		}
+		items.add(item);
+		//	this.add_item(item);
+		return "test";
+	}
+
+	@Override
+	public CharSequence remove_item(CharSequence item) throws AvroRemoteException {
+		this.items.remove(item);
+		if(this.items.isEmpty())
+		proxy.notify_empty_fridge(this.ID);
+		// TODO Auto-generated method stub
+		return "test";
 	}
 }

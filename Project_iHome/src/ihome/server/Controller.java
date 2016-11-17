@@ -407,6 +407,16 @@ public class Controller implements ServerProto
 			this.uidmap.get(i).is_online = this.uidalive.get(i);
 			this.uidalive.put(i, false);
 		}
+		
+		for(int j : this.uidmap.keySet()){
+			int c_id = this.uidmap.get(j).has_local_connect;
+			if(c_id >= 0){
+				if(!this.uidmap.get(c_id).is_online ){
+					this.uidmap.get(j).has_local_connect = -1;
+				}
+					
+			}
+		}
 	}
 	
 	
@@ -493,5 +503,65 @@ public class Controller implements ServerProto
 		controller.stopServer();
 	}
 
-	
+
+	/*********************
+	 ** FRIGDE FUNTIONS **
+	 *********************/
+	@Override
+	public CharSequence get_fridge_port(int uid, int fridgeid) throws AvroRemoteException {
+		if(!this.uidmap.containsKey(fridgeid))
+			return "{\"socket\" : NULL}";
+		
+		if(!this.uidmap.get(fridgeid).is_online){
+			return "{\"socket\" : NULL, \"Error\" : \"[Error] Fridge is offline.\"}";
+		}
+		
+		if(this.uidmap.get(fridgeid).has_local_connect >= 0)
+			return "{\"socket\" : NULL, \"Error\" : \"[Error] fridge already in use.\"}";
+				
+		
+		if(this.uidmap.get(fridgeid).type == 2){
+			this.uidmap.get(fridgeid).has_local_connect = uid;
+			return "{\"socket\" : " + (fridgeid + 6790) + "}";
+		}
+		else{
+			return "{\"socket\" : NULL}";
+		}
+	}
+
+	@Override
+	public int release_fridge(int uid) throws AvroRemoteException {
+		this.uidmap.get(uid).has_local_connect = -1;
+		return 0;
+	}
+
+	@Override
+	public int report_offline(int uid) throws AvroRemoteException {
+		this.uidmap.get(uid).is_online = false;
+		return 0;
+	}
+
+
+	@Override
+	public int notify_empty_fridge(int uid) throws AvroRemoteException {
+		try{
+			if(this.uidmap.get(uid).type == 2){
+				for (int id : uidmap.keySet()) {
+					int type = uidmap.get(id).type;
+					if (type == 0) {
+						// Send me to user
+					
+						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+						int response = userproxy.notify_empty_fridge(uid);
+						
+					} 
+				}
+			}
+				
+		}catch(Exception e){
+			
+		}
+		return 0;
+	}
 }

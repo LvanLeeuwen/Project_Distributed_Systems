@@ -4,6 +4,10 @@
 		"update_controller" : {
 			"request" : [{"name" : "jsonController", "type" : "string"}],
 			"response" : "string"
+		},
+		"notify_empty_fridge" : {
+			"request" : [{"name" : "fid", "type" : "int"}],
+			"response" : "int"
 		}
 	}
 }
