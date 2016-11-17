@@ -74,6 +74,7 @@ public class Controller implements ServerProto
 				uidalive.put(nextID, true);
 			}
 			System.out.println("Device connected with id " + nextID);
+			this.sendController(nextID);
 			return "{\"UID\" : \""+ (nextID++) + "\", \"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"UID\" : NULL, \"Error\" : \"[Error] " + e.getMessage();
@@ -89,6 +90,7 @@ public class Controller implements ServerProto
 		}
 		try{
 			uidmap.remove(uid);
+			this.sendController();
 			return "{\"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"Error\" : \"[Error] " + e.getMessage();
@@ -118,7 +120,8 @@ public class Controller implements ServerProto
 		}
 	}
 
-	public CharSequence sendController() {
+	@Override
+	public int sendController() throws AvroRemoteException {
 		try {
 			// Create JSON object
 			JSONObject json = new JSONObject();
@@ -145,25 +148,70 @@ public class Controller implements ServerProto
 				int type = uidmap.get(id).type;
 				if (type == 0) {
 					// Send me to user
-				
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
-					return response;
 				} else if (type == 2) {
 					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
 					CharSequence response = fridgeproxy.update_controller(json.toString());
-					System.out.println(response);
-					return response;
 				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			return "sendController" + e.toString();
+			return 0;
 		}
-		return "sendController finished";
+		return 0;
+	}
+
+	public void sendController(int uid) {
+		try {
+			// Create JSON object
+			JSONObject json = new JSONObject();
+			json.put("nextID", nextID);
+			json.put("sensormap", sensormap);
+			json.put("uidalive", uidalive);
+			/*
+			 * uidmap:
+			 * each device has a type and an online value
+			 */
+			JSONObject jsonuidmap = new JSONObject();
+			for (int id : uidmap.keySet()) {
+				Device value = uidmap.get(id);
+				JSONObject device = new JSONObject();
+				device.put("type", value.type);
+				device.put("is_online", value.is_online ? 1 : 0);
+				device.put("ip_address", value.IPAddress.toString());
+				jsonuidmap.put(String.valueOf(id), device);
+			}
+			json.put("uidmap", jsonuidmap);
+			
+			// Send json
+			for (int id : uidmap.keySet()) {
+				// Sla opgegeven uid over
+				if (id == uid) continue;
+				
+				int type = uidmap.get(id).type;
+				if (type == 0) {
+					// Send me to user
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+					CharSequence response = userproxy.update_controller(json.toString());
+					return;
+				} else if (type == 2) {
+					// Send me to fridge
+					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
+					CharSequence response = fridgeproxy.update_controller(json.toString());
+					return;
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
+		return;
 	}
 
 	public CharSequence updateController(CharSequence jsonController) {
@@ -211,8 +259,8 @@ public class Controller implements ServerProto
 		} catch (Exception e) {
 			e.printStackTrace();
 			return "updateController" + e.toString();
-		}		
-		return "updateController Finished";
+		}	
+		return "";
 	}
 	/**************************
 	 ** DEVICE FUNCTIONALITY **
@@ -245,6 +293,7 @@ public class Controller implements ServerProto
 		}
 		try{
 			this.sensormap.get(uid).add(value);
+			this.sendController();
 			return "{\"Error\" : NULL}";
 
 		}catch (Exception e){
@@ -343,6 +392,7 @@ public class Controller implements ServerProto
 			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
 			LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
 			CharSequence state = proxy.switch_state();
+			this.sendController();
 			return "{\"Switched\" : true, \"Error\" : NULL}";
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -352,9 +402,38 @@ public class Controller implements ServerProto
 	}
 	
 	
-	/**************************
-	 ** FRIDGE FUNCTIONALITY **
-	 **************************/
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
+	
+	@Override
+	public int i_am_alive(int uid) throws AvroRemoteException {
+		this.uidalive.put(uid, true);
+		return 0;
+	}
+	
+	public void check_alive(){
+		for(int i : this.uidalive.keySet()){
+			this.uidmap.get(i).is_online = this.uidalive.get(i);
+			this.uidalive.put(i, false);
+		}
+		
+		for(int j : this.uidmap.keySet()){
+			int c_id = this.uidmap.get(j).has_local_connect;
+			if(c_id >= 0){
+				if(!this.uidmap.get(c_id).is_online ){
+					this.uidmap.get(j).has_local_connect = -1;
+				}
+					
+			}
+		}
+	}
+	
+	
+
+	/*********************
+	 ** FRIDGE FUNTIONS **
+	 *********************/
 	@Override
 	public CharSequence get_fridge_contents(int uid) throws AvroRemoteException {
 		Device fridge = uidmap.get(uid);
@@ -390,40 +469,87 @@ public class Controller implements ServerProto
 		}
 	}
 	
-
-	
-	/*************************
-	 ** ALIVE FUNCTIONALITY **
-	 *************************/
-	
 	@Override
-	public int i_am_alive(int uid) throws AvroRemoteException {
-		this.uidalive.put(uid, true);
+	public CharSequence get_fridge_port(int uid, int fridgeid) throws AvroRemoteException {
+		if(!this.uidmap.containsKey(fridgeid))
+			return "{\"socket\" : NULL}";
+		
+		if(!this.uidmap.get(fridgeid).is_online){
+			return "{\"socket\" : NULL, \"Error\" : \"[Error] Fridge is offline.\"}";
+		}
+		
+		if(this.uidmap.get(fridgeid).has_local_connect >= 0)
+			return "{\"socket\" : NULL, \"Error\" : \"[Error] fridge already in use.\"}";
+				
+		
+		if(this.uidmap.get(fridgeid).type == 2){
+			this.uidmap.get(fridgeid).has_local_connect = uid;
+			return "{\"socket\" : " + (fridgeid + 6790) + "}";
+		}
+		else{
+			return "{\"socket\" : NULL}";
+		}
+	}
+
+	@Override
+	public int release_fridge(int uid) throws AvroRemoteException {
+		this.uidmap.get(uid).has_local_connect = -1;
+		this.sendController();
+		return 0;
+	}
+
+	@Override
+	public int report_offline(int uid) throws AvroRemoteException {
+		this.uidmap.get(uid).is_online = false;
+		this.sendController();
+		return 0;
+	}
+
+	@Override
+	public int notify_empty_fridge(int uid) throws AvroRemoteException {
+		try{
+			if(this.uidmap.get(uid).type == 2){
+				for (int id : uidmap.keySet()) {
+					int type = uidmap.get(id).type;
+					if (type == 0) {
+						// Send me to user
+						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+						int response = userproxy.notify_empty_fridge(uid);
+						
+					} 
+				}
+			}
+				
+		}catch(Exception e){
+			
+		}
 		return 0;
 	}
 	
-	public void check_alive(){
-		for(int i : this.uidalive.keySet()){
-			this.uidmap.get(i).is_online = this.uidalive.get(i);
-			this.uidalive.put(i, false);
-		}
-		
-		for(int j : this.uidmap.keySet()){
-			int c_id = this.uidmap.get(j).has_local_connect;
-			if(c_id >= 0){
-				if(!this.uidmap.get(c_id).is_online ){
-					this.uidmap.get(j).has_local_connect = -1;
-				}
-					
+	/*******************
+	 * LEADER ELECTION *
+	 *******************/
+	
+	public Map<Integer, CharSequence> getPossibleParticipants(){
+		Map<Integer, CharSequence>out = new HashMap<Integer, CharSequence>();
+		for(int key : uidmap.keySet()){
+			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2) && uidmap.get(key).is_online){
+				out.put(key, uidmap.get(key).IPAddress);
 			}
 		}
+		return out;
 	}
+	
+	public Map<Integer, Device> getUidmap(){
+		return this.uidmap;
+	}
+	
 	
 	
 	/*************************
 	 ** MAIN FUNCTION       **
 	 *************************/
-	
 	public static void main(String [] args){
 		Scanner reader = new Scanner(System.in);
 		System.out.println("What is your IP address?");
@@ -493,7 +619,12 @@ public class Controller implements ServerProto
 					e.printStackTrace();
 				}
 			} else if (in == 7) {
-				System.out.println(controller.sendController());
+				try {
+					controller.sendController();
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else {
 				break;
 			}
@@ -501,86 +632,6 @@ public class Controller implements ServerProto
 
 		//controller.get_light_state(0);
 		controller.stopServer();
-	}
-
-
-	/*********************
-	 ** FRIGDE FUNTIONS **
-	 *********************/
-	@Override
-	public CharSequence get_fridge_port(int uid, int fridgeid) throws AvroRemoteException {
-		if(!this.uidmap.containsKey(fridgeid))
-			return "{\"socket\" : NULL}";
-		
-		if(!this.uidmap.get(fridgeid).is_online){
-			return "{\"socket\" : NULL, \"Error\" : \"[Error] Fridge is offline.\"}";
-		}
-		
-		if(this.uidmap.get(fridgeid).has_local_connect >= 0)
-			return "{\"socket\" : NULL, \"Error\" : \"[Error] fridge already in use.\"}";
-				
-		
-		if(this.uidmap.get(fridgeid).type == 2){
-			this.uidmap.get(fridgeid).has_local_connect = uid;
-			return "{\"socket\" : " + (fridgeid + 6790) + "}";
-		}
-		else{
-			return "{\"socket\" : NULL}";
-		}
-	}
-
-	@Override
-	public int release_fridge(int uid) throws AvroRemoteException {
-		this.uidmap.get(uid).has_local_connect = -1;
-		return 0;
-	}
-
-	@Override
-	public int report_offline(int uid) throws AvroRemoteException {
-		this.uidmap.get(uid).is_online = false;
-		return 0;
-	}
-
-
-	@Override
-	public int notify_empty_fridge(int uid) throws AvroRemoteException {
-		try{
-			if(this.uidmap.get(uid).type == 2){
-				for (int id : uidmap.keySet()) {
-					int type = uidmap.get(id).type;
-					if (type == 0) {
-						// Send me to user
-					
-						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
-						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
-						int response = userproxy.notify_empty_fridge(uid);
-						
-					} 
-				}
-			}
-				
-		}catch(Exception e){
-			
-		}
-		return 0;
-	}
-	
-	/*******************
-	 * LEADER ELECTION *
-	 *******************/
-	
-	public Map<Integer, CharSequence> getPossibleParticipants(){
-		Map<Integer, CharSequence>out = new HashMap<Integer, CharSequence>();
-		for(int key : uidmap.keySet()){
-			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2) && uidmap.get(key).is_online){
-				out.put(key, uidmap.get(key).IPAddress);
-			}
-		}
-		return out;
-	}
-	
-	public Map<Integer, Device> getUidmap(){
-		return this.uidmap;
 	}
 	
 }

@@ -23,8 +23,8 @@ public class Light implements LightProto {
 	private Transceiver light;
 	private ServerProto proxy;
 
+	// Light variables
 	private String name;
-	private int nextName = 0;
 	private int ID;
 	private String state = "off";
 	private String IPAddress;
@@ -39,6 +39,9 @@ public class Light implements LightProto {
 		server_ip_address = server_ip;
 	}
 	
+	/**************************
+	 ** SERVER FUNCTIONALITY **
+	 **************************/
 	public void connect_to_server() {
 		try {
 			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
@@ -48,7 +51,7 @@ public class Light implements LightProto {
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
-			name = "light" + nextName++;
+			name = "light" + ID;
 			System.out.println("name: " + name + " ID: " + ID);
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
@@ -97,6 +100,29 @@ public class Light implements LightProto {
 		}
 	}
 	
+	public void pullServer() {
+		try {
+			proxy.sendController();
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	@Override
+	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+		this.server_ip_address = server_ip.toString();
+		try {
+			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("New leader: " + server_ip);
+		return 0;
+	}
+	
 	public static void main(String[] args) {
 		// Connect to server
 		Scanner reader = new Scanner(System.in);
@@ -105,14 +131,15 @@ public class Light implements LightProto {
 		System.out.println("What is the servers IP address?");
 		String server_ip = reader.nextLine();
 		Light myLight = new Light(ip_address, server_ip);
-		myLight.connect_to_server();
 		
+		myLight.connect_to_server();
 		myLight.runServer();
+		myLight.pullServer();
+		
 		while(true){
 			int a;
 		}
 		
 		//myLight.stopServer();
 	}
-
 }

@@ -61,8 +61,10 @@
 		"notify_empty_fridge" :{
 			"request": [{"name" : "uid", "type": "int"}],
 			"response": "int"
-		}
-						
-
+		},
+		"sendController" :{
+			"request" : [],
+			"response" : "int"
+		}		
 	}
 }
