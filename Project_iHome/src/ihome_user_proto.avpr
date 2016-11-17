@@ -8,6 +8,14 @@
 		"notify_empty_fridge" : {
 			"request" : [{"name" : "fid", "type" : "int"}],
 			"response" : "int"
+		},
+		"Election" : {
+			"request" : [],
+			"response" : "int"
+		},
+		"ReceiveCoord" : {
+			"request" : [{"name" : "server_ip", "type" : "string"}],
+			"response" : "int"
 		}
 	}
 }

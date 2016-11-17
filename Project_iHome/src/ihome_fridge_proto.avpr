@@ -20,6 +20,15 @@
 		"remove_item" : {
 			"request" : [{"name" : "item", "type" : "string"}],
 			"response" : "string"
+		},
+		"Election" : {
+			"request" : [],
+			"response" : "bool"
+		},
+		"ReceiveCoord" : {
+			"request" : [{"name" : "server_ip", "type" : "string"}],
+			"response" : "int"
 		}
+
 	}
 }

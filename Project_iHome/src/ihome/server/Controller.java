@@ -564,4 +564,23 @@ public class Controller implements ServerProto
 		}
 		return 0;
 	}
+	
+	/*******************
+	 * LEADER ELECTION *
+	 *******************/
+	
+	public Map<Integer, CharSequence> getPossibleParticipants(){
+		Map<Integer, CharSequence>out = new HashMap<Integer, CharSequence>();
+		for(int key : uidmap.keySet()){
+			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2) && uidmap.get(key).is_online){
+				out.put(key, uidmap.get(key).IPAddress);
+			}
+		}
+		return out;
+	}
+	
+	public Map<Integer, Device> getUidmap(){
+		return this.uidmap;
+	}
+	
 }

@@ -1,7 +1,10 @@
 package ihome.client;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -39,6 +42,9 @@ public class User implements UserProto {
 	private AliveCaller ac;
 	
 	private Timer timer;
+	
+	//leader election variables
+	private Boolean participant = false;
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -97,7 +103,92 @@ public class User implements UserProto {
 		}
 	}
 	
-
+	/******************************
+	 ** CONTROLLER FUNCTIONALITY **
+	 ******************************/
+	
+	public void startLeaderElection(){
+		
+		Map<Integer, CharSequence>candidates = this.controller.getPossibleParticipants();
+		Map<Integer, CharSequence> L = new HashMap<Integer, CharSequence>();
+		Map<Integer, CharSequence> S = new HashMap<Integer, CharSequence>();
+		
+		//init L and S
+		for (int key : candidates.keySet()){
+			if( key == this.ID)
+				continue;
+			else if(key > this.ID)
+				L.put(key, candidates.get(key));
+			else if(key < this.ID)
+				S.put(key, candidates.get(key));
+		}
+		
+		
+		if(L.size() <= 0){
+			this.participant = false;
+			this.controller.runServer();
+			
+			try {
+				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6790 + ID));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		
+			
+			//Coordinator
+			
+		} else{ //not the highest id
+			this.participant = true;
+			
+			int number_of_failures = 0;
+			
+			//try to contact someone with a higher id
+			for(int key : L.keySet()){
+				try {
+					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(L.get(key).toString(), 6790 + key));
+					if(this.controller.getUidmap().get(key).type == 0){
+						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
+						uproxy.Election();
+					} else{
+						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
+						fproxy.Election();
+					}
+					return;
+				} catch (IOException e) {
+					number_of_failures++;
+				}
+			}
+			//no one is reachable, choose yourself
+			try {
+				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6790 + ID));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+		}
+	}
+	
+	@Override
+	public int Election() throws AvroRemoteException {
+		if(!this.participant){
+			this.startLeaderElection();
+		}
+		return 0;
+	}
+	
+	@Override
+	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+		this.server_IP_address = server_ip.toString();
+		
+		return 0;
+	}
+	
+	
+	
 	/******************************
 	 ** CONTROLLER FUNCTIONALITY **
 	 ******************************/
@@ -353,5 +444,6 @@ public class User implements UserProto {
 		System.out.println("Fridge " + fid + " is empty!");
 		return 0;
 	}
+	
 
 }

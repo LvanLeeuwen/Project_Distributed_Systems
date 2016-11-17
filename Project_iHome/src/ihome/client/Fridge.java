@@ -36,6 +36,8 @@ public class Fridge implements FridgeProto {
 	private ArrayList<CharSequence> items = new ArrayList<CharSequence>();
 	private ArrayList<CharSequence> allItems = new ArrayList<CharSequence>();
 	
+	private Boolean participant = false;
+	
 	/******************
 	 ** CONSTRUCTORS **
 	 ******************/
@@ -89,6 +91,27 @@ public class Fridge implements FridgeProto {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	/************
+	 * election *
+	 ************/
+	public void startLeaderElection(){
+		
+	}
+	@Override
+	public int Election() throws AvroRemoteException {
+		if(!this.participant){
+			this.startLeaderElection();
+		}
+		return 0;
+	}
+	
+	@Override
+	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+		this.server_ip_address = server_ip.toString();
+		
+		return 0;
 	}
 	
 	/**************************
