@@ -545,8 +545,20 @@ public class Controller implements ServerProto
 	@Override
 	public int notify_empty_fridge(int uid) throws AvroRemoteException {
 		try{
-			if(this.uidmap.get(uid).type == 2)
-				System.out.println("Fridge " + uid + " is empty.");
+			if(this.uidmap.get(uid).type == 2){
+				for (int id : uidmap.keySet()) {
+					int type = uidmap.get(id).type;
+					if (type == 0) {
+						// Send me to user
+					
+						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+						int response = userproxy.notify_empty_fridge(uid);
+						
+					} 
+				}
+			}
+				
 		}catch(Exception e){
 			
 		}

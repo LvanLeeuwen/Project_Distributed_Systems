@@ -348,4 +348,10 @@ public class User implements UserProto {
 		}
 	}
 
+	@Override
+	public int notify_empty_fridge(int fid) throws AvroRemoteException {
+		System.out.println("Fridge " + fid + " is empty!");
+		return 0;
+	}
+
 }
