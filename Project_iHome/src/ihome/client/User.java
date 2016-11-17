@@ -24,7 +24,7 @@ public class User implements UserProto {
 	
 	final static int wtna = Controller.check_alive_interval / 3; 
 	
-	private Controller controller = new Controller();
+	private Controller controller;
 	private Server server = null;
 	private Transceiver user;
 	private ServerProto proxy;
@@ -32,19 +32,33 @@ public class User implements UserProto {
 	private String name;
 	private int nextName = 0;
 	private int ID;
+	private String IPAddress;
+	private String server_IP_address;
 	
 	
 	private AliveCaller ac;
 	
 	private Timer timer;
 	
+	/******************
+	 ** CONSTRUCTORS **
+	 ******************/
+	// Default constructor
+	public User() {}
+	// Constructor met IP address
+	public User(String ip_address, String server_ip) {
+		IPAddress = ip_address;
+		server_IP_address = server_ip;
+		controller = new Controller(ip_address);
+	}
+	
 	
 	public void connect_to_server() {
 		try {
-			user = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			user = new SaslSocketTransceiver(new InetSocketAddress(server_IP_address, 6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
 			System.out.println("Connected to server");
-			CharSequence response = proxy.connect(0);
+			CharSequence response = proxy.connect(0, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
@@ -98,7 +112,7 @@ public class User implements UserProto {
 		try
 		{
 			server = new SaslSocketServer(new SpecificResponder(UserProto.class,
-					this), new InetSocketAddress(6790+ID));
+					this), new InetSocketAddress(IPAddress, 6790+ID));
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
@@ -118,8 +132,12 @@ public class User implements UserProto {
 	}
 
 	public static void main(String[] args) {
-		// Connect to server
-		User myUser = new User();
+		Scanner reader = new Scanner(System.in);
+		System.out.println("What is your IP address?");
+		String ip_address = reader.nextLine();
+		System.out.println("What is the servers IP address?");
+		String server_ip = reader.nextLine();
+		User myUser = new User(ip_address, server_ip);
 		myUser.runServer();
 		myUser.connect_to_server();
 		while (true) {
@@ -137,7 +155,6 @@ public class User implements UserProto {
 			 * 		Ask controller for current temperature in the house.
 			 * 		Ask controller for history of temperature in the house.
 			 */
-			Scanner reader = new Scanner(System.in);
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get list of all devices and users");
 			System.out.println("2) Get overview of the state of all the lights");

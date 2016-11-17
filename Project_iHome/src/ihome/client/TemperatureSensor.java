@@ -3,6 +3,7 @@ package ihome.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
@@ -31,13 +32,24 @@ public class TemperatureSensor {
 	private String name;
 	private float temperature;
 	private ArrayList<Float> unsendTemperatures = new ArrayList<Float>();
+	private String IPAddress;
+	private String server_ip_address;
+	
+	/******************
+	 ** CONSTRUCTORS **
+	 ******************/
+	public TemperatureSensor() {}
+	public TemperatureSensor(String ip_address, String server_ip) {
+		IPAddress = ip_address;
+		server_ip_address = server_ip;
+	}
 	
 	public void connect_to_server(float initTemp) {
 		try {
-			sensor = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
 			System.out.println("Connected to server");
-			CharSequence response = proxy.connect(1);
+			CharSequence response = proxy.connect(1, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
@@ -101,7 +113,12 @@ public class TemperatureSensor {
 	
 	public static void main(String[] args) {
 		// Connect to server
-		TemperatureSensor mySensor = new TemperatureSensor();
+		Scanner reader = new Scanner(System.in);
+		System.out.println("What is your IP address?");
+		String ip_address = reader.nextLine();
+		System.out.println("What is the servers IP address?");
+		String server_ip = reader.nextLine();
+		TemperatureSensor mySensor = new TemperatureSensor(ip_address, server_ip);
 		mySensor.connect_to_server(18f);
 		Timer timer = new Timer();
 		TimerTask task = new TimerTask() {

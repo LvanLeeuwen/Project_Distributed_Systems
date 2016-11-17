@@ -2,7 +2,7 @@
 	"protocol" : "ServerProto",
 	"messages" : {
 		"connect" : {
-			"request" : [{"name" : "device_type", "type" : "int"}],
+			"request" : [{"name" : "device_type", "type" : "int"}, {"name" : "ip_address", "type" : "string"}],
 			"response" : "string"
 		},
 		"disconnect" : {
