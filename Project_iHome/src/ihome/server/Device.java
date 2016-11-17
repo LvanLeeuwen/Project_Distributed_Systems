@@ -11,16 +11,19 @@ public class Device {
 	 */
 	public int type;
 	public boolean is_online;
+	public CharSequence IPAddress;
 	
-	public Device(int t)
+	public Device(int t, CharSequence i)
 	{
 		type = t;
 		is_online = true;
+		IPAddress = i;
 	}
 	
-	public Device(int t, boolean o) {
+	public Device(int t, boolean o, CharSequence i) {
 		type = t;
 		is_online = o;
+		IPAddress = i;
 	}
 	
 

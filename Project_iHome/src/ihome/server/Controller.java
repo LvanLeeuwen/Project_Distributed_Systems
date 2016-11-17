@@ -14,8 +14,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
-import org.json.*;
 
+import org.json.*;
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
 import org.apache.avro.ipc.SaslSocketTransceiver;
@@ -33,18 +33,24 @@ public class Controller implements ServerProto
 	private Map<Integer, Boolean> uidalive = new HashMap<Integer, Boolean>();
 	private int nextID = 0;
 	private final int nr_types = 4;
+	private String IPAddress;
 	
 	private Timer timer;
 	private AliveResponder ar;
 	
 	public static final int check_alive_interval = 1000;
 	
-	public Controller(){
+	/******************
+	 ** CONSTRUCTORS **
+	 ******************/
+	public Controller() {}
+	public Controller(String ip_address){
 		timer = new Timer();
 		ar = new AliveResponder(this);
 		
 		timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
 		
+		IPAddress = ip_address;
 	}
 
 	
@@ -53,7 +59,7 @@ public class Controller implements ServerProto
 	 **************************/
 	
 	@Override
-	public CharSequence connect(int device_type) throws AvroRemoteException {
+	public CharSequence connect(int device_type, CharSequence ip_address) throws AvroRemoteException {
 		
 		if(device_type < 0 || device_type >= nr_types)
 		{
@@ -61,7 +67,7 @@ public class Controller implements ServerProto
 		}
 		
 		try{
-			uidmap.put(nextID, new Device(device_type));
+			uidmap.put(nextID, new Device(device_type, ip_address));
 			if(device_type == 1)
 				sensormap.put(nextID, new ArrayList<Float>());
 			else if(device_type == 0){
@@ -94,7 +100,7 @@ public class Controller implements ServerProto
 		try
 		{
 			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
-					this), new InetSocketAddress(6789));
+					this), new InetSocketAddress(IPAddress, 6789));
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
@@ -126,9 +132,10 @@ public class Controller implements ServerProto
 			JSONObject jsonuidmap = new JSONObject();
 			for (int id : uidmap.keySet()) {
 				Device value = uidmap.get(id);
-				Map<String, Integer> device = new HashMap<String, Integer>();
+				JSONObject device = new JSONObject();
 				device.put("type", value.type);
 				device.put("is_online", value.is_online ? 1 : 0);
+				device.put("ip_address", value.IPAddress.toString());
 				jsonuidmap.put(String.valueOf(id), device);
 			}
 			json.put("uidmap", jsonuidmap);
@@ -174,7 +181,8 @@ public class Controller implements ServerProto
 				JSONObject devices = jsonuidmap.getJSONObject(nextKey);
 				int type = devices.getInt("type");
 				boolean online = devices.getInt("is_online") == 1 ? true : false;
-				uidmap.put(id, new Device(type, online));
+				CharSequence ip_address = devices.getString("ip_address");
+				uidmap.put(id, new Device(type, online, ip_address));
 			}
 			sensormap.clear();
 			JSONObject jsonsensormap = json.getJSONObject("sensormap");
@@ -407,12 +415,13 @@ public class Controller implements ServerProto
 	 *************************/
 	
 	public static void main(String [] args){
-		
-		Controller controller = new Controller();
+		Scanner reader = new Scanner(System.in);
+		System.out.println("What is your IP address?");
+		String server_ip = reader.nextLine();
+		Controller controller = new Controller(server_ip);
 		controller.runServer();
 
 		while(true){
-			Scanner reader = new Scanner(System.in);
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get in-session list");
 			//System.out.println("2) Get state light");

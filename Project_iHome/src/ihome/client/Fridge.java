@@ -23,16 +23,28 @@ import ihome.proto.lightside.LightProto;
 public class Fridge implements FridgeProto {
 	
 	private Server server = null;
-	private Controller controller = new Controller();
+	private Controller controller;
 	private Transceiver fridge;
 	private ServerProto proxy;
 
 	private String name;
 	private int nextName = 0;
 	private int ID;
+	private String IPAddress;
+	private String server_ip_address;
 	private boolean opened = false;
 	private ArrayList<String> items = new ArrayList<String>();
 	private ArrayList<String> allItems = new ArrayList<String>();
+	
+	/******************
+	 ** CONSTRUCTORS **
+	 ******************/
+	public Fridge() {}
+	public Fridge(String ip_address, String server_ip) {
+		IPAddress = ip_address;
+		server_ip_address = server_ip;
+		controller = new Controller(ip_address);
+	}
 	
 	
 	/**************************
@@ -40,10 +52,10 @@ public class Fridge implements FridgeProto {
 	 **************************/
 	public void connect_to_server() {
 		try {
-			fridge = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
 			System.out.println("Connected to server");
-			CharSequence response = proxy.connect(2);
+			CharSequence response = proxy.connect(2, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
@@ -60,7 +72,7 @@ public class Fridge implements FridgeProto {
 		try
 		{
 			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
-					this), new InetSocketAddress(6790+ID));
+					this), new InetSocketAddress(IPAddress, 6790+ID));
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
@@ -143,8 +155,12 @@ public class Fridge implements FridgeProto {
 	 ** MAIN FUNCTIONALITY   **
 	 **************************/
 	public static void main(String[] args) {
-		// Connect to server
-		Fridge myFridge = new Fridge();
+		Scanner reader = new Scanner(System.in);
+		System.out.println("What is your IP address?");
+		String ip_address = reader.nextLine();
+		System.out.println("What is the servers IP address?");
+		String server_ip = reader.nextLine();
+		Fridge myFridge = new Fridge(ip_address, server_ip);
 		myFridge.connect_to_server();
 		
 		myFridge.runServer();
@@ -157,7 +173,7 @@ public class Fridge implements FridgeProto {
 			 * 		Add or remove an item to or from the fridge.
 			 */
 			
-			Scanner reader = new Scanner(System.in);
+			
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get my controllers devices");
 			

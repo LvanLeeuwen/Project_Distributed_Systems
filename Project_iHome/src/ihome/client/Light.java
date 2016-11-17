@@ -2,6 +2,7 @@ package ihome.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Scanner;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -26,13 +27,24 @@ public class Light implements LightProto {
 	private int nextName = 0;
 	private int ID;
 	private String state = "off";
+	private String IPAddress;
+	private String server_ip_address;
+	
+	/******************
+	 ** CONSTRUCTORS **
+	 ******************/
+	public Light() {}
+	public Light(String ip_address, String server_ip) {
+		IPAddress = ip_address;
+		server_ip_address = server_ip;
+	}
 	
 	public void connect_to_server() {
 		try {
-			light = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
 			System.out.println("Connected to server");
-			CharSequence response = proxy.connect(3);
+			CharSequence response = proxy.connect(3, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
@@ -66,7 +78,7 @@ public class Light implements LightProto {
 		try
 		{
 			server = new SaslSocketServer(new SpecificResponder(LightProto.class,
-					this), new InetSocketAddress(6790+ID));
+					this), new InetSocketAddress(IPAddress, 6790+ID));
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
@@ -87,7 +99,12 @@ public class Light implements LightProto {
 	
 	public static void main(String[] args) {
 		// Connect to server
-		Light myLight = new Light();
+		Scanner reader = new Scanner(System.in);
+		System.out.println("What is your IP address?");
+		String ip_address = reader.nextLine();
+		System.out.println("What is the servers IP address?");
+		String server_ip = reader.nextLine();
+		Light myLight = new Light(ip_address, server_ip);
 		myLight.connect_to_server();
 		
 		myLight.runServer();
