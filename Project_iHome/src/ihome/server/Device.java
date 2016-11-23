@@ -26,6 +26,7 @@ public class Device {
 		type = t;
 		is_online = o;
 		IPAddress = i;
+		has_local_connect = -1;
 	}
 	
 

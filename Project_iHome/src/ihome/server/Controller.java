@@ -349,10 +349,12 @@ public class Controller implements ServerProto
 		System.out.println("Currently in session("+ this.uidmap.size()+ "):");
 		for(int id : uidmap.keySet())
 		{
-			System.out.println(id + " " +  Boolean.toString(uidmap.get(id).is_online));
+			System.out.println(id + " " +  Boolean.toString(uidmap.get(id).is_online) + " " + uidmap.get(id).type +" "+ uidmap.get(id).has_local_connect);
 		}
 		System.out.print("\n");
 	}
+	
+	
 
 
 	

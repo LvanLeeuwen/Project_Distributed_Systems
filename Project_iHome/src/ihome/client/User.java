@@ -292,6 +292,7 @@ public class User implements UserProto {
 	private int getPort(int uid){
 		try {
 			CharSequence response = proxy.get_fridge_port(this.ID, uid);
+			System.out.println(response);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("socket"))
 				return json.getInt("socket");
@@ -383,6 +384,87 @@ public class User implements UserProto {
 		System.out.println("Fridge " + fid + " is empty!");
 		return 0;
 	}
+	
+	/************************
+	 * CONTROLLER FUNCTIONS *
+	 ************************/
+	
+	public void useController()
+	{
+		Scanner reader = new Scanner(System.in);
+		while(true){
+			System.out.println("What do you want to do?");
+			System.out.println("1) Get in-session list");
+			//System.out.println("2) Get state light");
+			System.out.println("3) Switch state light");
+			System.out.println("4) Get contents fridge");
+			System.out.println("5) Get current en removed contents fridge");
+			System.out.println("6) Get temperature list");
+			System.out.println("7) send controller");
+			System.out.println("8) exit" );
+			int in = reader.nextInt();
+			if(in == 1){
+				
+				controller.printInSession();
+				/*try {
+					controller.printInSession();
+					//System.out.println(controller.get_all_devices());
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}*/
+			} /*else if(in ==2){
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					controller.get_light_state(id);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} */else if(in ==3){
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					controller.switch_state_light(id);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 4) {
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					controller.get_fridge_contents(id);
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 5) {
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				controller.get_all_fridge_contents(id);
+			} else if (in == 6) {
+				System.out.println("Give id:");
+				int id = reader.nextInt();
+				try {
+					System.out.println(controller.get_temperature_list(id, id));
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 7) {
+				try {
+					controller.sendController();
+				} catch (AvroRemoteException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				return;
+			}
+		}
+	}
 
 	
 	/**********
@@ -425,6 +507,7 @@ public class User implements UserProto {
 			System.out.println("7) Start connection with Fridge");
 			System.out.println("8) Show my controllers devices");
 			System.out.println("9) Start leader election");
+			System.out.println("10) use Controller");
 
 			
 			int in = reader.nextInt();
@@ -498,15 +581,18 @@ public class User implements UserProto {
 				}			
 			} else if (in == 9) {
 				myUser.startLeaderElection();
-			} else {
+			} else if (in == 10){
+				myUser.useController();
+			}else {
+			
 				break;
 			}
 			
 			
 		}
 	}
-
-	
-	
-
 }
+	
+	
+
+
