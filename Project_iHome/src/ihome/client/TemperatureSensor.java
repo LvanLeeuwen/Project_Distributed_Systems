@@ -11,21 +11,28 @@ import java.util.Arrays;
 import java.util.ArrayList;
 
 import org.apache.avro.AvroRemoteException;
+import org.apache.avro.ipc.SaslSocketServer;
 import org.apache.avro.ipc.SaslSocketTransceiver;
+import org.apache.avro.ipc.Server;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
+import org.apache.avro.ipc.specific.SpecificResponder;
 import org.apache.avro.ipc.CallFuture;
 import org.json.JSONObject;
 
+import ihome.proto.lightside.LightProto;
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
+import ihome.proto.sensorside.SensorProto;
 
-public class TemperatureSensor {
+public class TemperatureSensor implements SensorProto {
 
 	// Variables to set up a connection with the server.
 	private Transceiver sensor;
-	private ServerProto.Callback proxy;
+	private ServerProto.Callback proxyASynchrone;
 	private CallFuture<CharSequence> future = new CallFuture<CharSequence>();
+	private Server server = null;
+	private ServerProto proxy;
 	
 	// Variables specifically for the temperature sensor
 	private int ID;
@@ -44,12 +51,16 @@ public class TemperatureSensor {
 		server_ip_address = server_ip;
 	}
 	
+	/**************************
+	 ** SERVER FUNCTIONALITY **
+	 **************************/
 	public void connect_to_server(float initTemp) {
 		try {
 			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
-			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
+			proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
+			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
 			System.out.println("Connected to server");
-			CharSequence response = proxy.connect(1, IPAddress);
+			CharSequence response = proxyASynchrone.connect(1, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
 			ID = json.getInt("UID");
@@ -63,6 +74,41 @@ public class TemperatureSensor {
 		}
 	}
 	
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(LightProto.class,
+					this), new InetSocketAddress(IPAddress, 6790+ID));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public void pullServer() {
+		try {
+			proxyASynchrone.sendController();
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	/*******************************
+	 ** TEMPERATURE FUNCTIONALITY **
+	 *******************************/
 	public void sent_temperature() {
 		// Calculate new temperature
 		float rangeMin = -1.0f;
@@ -74,7 +120,7 @@ public class TemperatureSensor {
 		// Try to send the new temperature to the server
 		try {
 			if (unsendTemperatures.isEmpty()) {
-				proxy.update_temperature(ID, temperature, future);
+				proxyASynchrone.update_temperature(ID, temperature, future);
 				JSONObject json = new JSONObject(future.get().toString());
 				if (!json.isNull("Error")) {
 					CharSequence error = json.getString("Error");
@@ -84,7 +130,7 @@ public class TemperatureSensor {
 				// Send all unsent temperatures.
 				unsendTemperatures.add(temperature);
 				for (float temp : unsendTemperatures) {
-					proxy.update_temperature(ID, temp, future);
+					proxyASynchrone.update_temperature(ID, temp, future);
 					JSONObject json = new JSONObject(future.get().toString());
 					if (!json.isNull("Error")) {
 						CharSequence error = json.getString("Error");
@@ -111,6 +157,27 @@ public class TemperatureSensor {
 		}
 	}
 	
+	
+	/****************************
+	 ** ELECTION FUNCTIONALITY **
+	 ****************************/
+	@Override
+	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+		this.server_ip_address = server_ip.toString();
+		try {
+			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+			proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("New leader: " + server_ip);
+		return 0;
+	}
+	
+	/************************
+	 ** MAIN FUNCTIONALITY **
+	 ************************/
 	public static void main(String[] args) {
 		// Connect to server
 		Scanner reader = new Scanner(System.in);
@@ -119,7 +186,14 @@ public class TemperatureSensor {
 		System.out.println("What is the servers IP address?");
 		String server_ip = reader.nextLine();
 		TemperatureSensor mySensor = new TemperatureSensor(ip_address, server_ip);
-		mySensor.connect_to_server(18f);
+		
+		System.out.println("What is the initial temperature of this sensor?");
+		float initTemp = reader.nextFloat();
+		mySensor.connect_to_server(initTemp);
+		mySensor.runServer();
+		mySensor.pullServer();
+		
+		// Set timer
 		Timer timer = new Timer();
 		TimerTask task = new TimerTask() {
 			@Override
@@ -127,6 +201,7 @@ public class TemperatureSensor {
 				mySensor.sent_temperature();
 			}
 		};
+		// Sent temperature every 10 seconds
 		timer.schedule(task, 10000, 10000);
 		
 		while (true) {

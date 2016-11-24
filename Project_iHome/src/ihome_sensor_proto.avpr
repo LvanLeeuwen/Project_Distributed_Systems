@@ -1,0 +1,10 @@
+{ "namespace" : "ihome.proto.sensorside",
+	"protocol" : "SensorProto",
+	"messages" : {
+		"ReceiveCoord" : {
+			"request" : [{"name" : "server_ip", "type" : "string"}],
+			"response" : "int"
+		}
+
+	}
+}

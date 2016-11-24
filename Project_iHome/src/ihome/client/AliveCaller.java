@@ -10,13 +10,12 @@ public class AliveCaller extends TimerTask{
 		this.u = user;
 	}
 	
-	
+	public void update(User user){
+		this.u = user;
+	}
 	@Override
 	public void run(){
-		
-				u.send_alive();
-				
-	
+		u.send_alive();
 	}
 
 }

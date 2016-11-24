@@ -8,6 +8,10 @@
 		"switch_state" : {
 			"request" : [],
 			"response" : "string"
+		},
+		"ReceiveCoord" : {
+			"request" : [{"name" : "server_ip", "type" : "string"}],
+			"response" : "int"
 		}
 	}
 }

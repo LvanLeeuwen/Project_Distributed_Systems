@@ -18,11 +18,11 @@
 			"response" : "string"
 		},
 		"get_temperature_list" : {
-			"request" : [{"name" : "uid", "type" : "int" }, { "name" : "sensor_id", "type" : "int"}],
+			"request" : [],
 			"response" : "string"
 		},
 		"get_temperature_current" : {
-			"request" : [{"name" : "uid", "type" : "int" }],
+			"request" : [],
 			"response" : "string"
 		},
 
@@ -61,8 +61,10 @@
 		"notify_empty_fridge" :{
 			"request": [{"name" : "uid", "type": "int"}],
 			"response": "int"
-		}
-						
-
+		},
+		"sendController" :{
+			"request" : [],
+			"response" : "int"
+		}		
 	}
 }
