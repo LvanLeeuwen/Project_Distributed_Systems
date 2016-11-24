@@ -112,7 +112,7 @@ public class Fridge implements FridgeProto {
 	/**************
 	 ** ELECTION **
 	 **************/
-	public void startLeaderElection(){
+	public CharSequence startLeaderElection(){
 		
 		Map<Integer, CharSequence>candidates = this.controller.getPossibleParticipants();
 		Map<Integer, CharSequence> L = new HashMap<Integer, CharSequence>();
@@ -135,7 +135,7 @@ public class Fridge implements FridgeProto {
 			
 			// Make me the server
 			try {
-				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6790 + ID));
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6789));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -165,6 +165,8 @@ public class Fridge implements FridgeProto {
 				}
 			}
 			
+			return this.server_ip_address;
+			
 		} else{ //not the highest id
 			this.participant = true;
 			
@@ -176,19 +178,18 @@ public class Fridge implements FridgeProto {
 					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(L.get(key).toString(), 6790 + key));
 					if(this.controller.getUidmap().get(key).type == 0){
 						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-						uproxy.Election();
+						return uproxy.Election();
 					} else{
 						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-						fproxy.Election();
+						return fproxy.Election();
 					}
-					return;
 				} catch (IOException e) {
 					number_of_failures++;
 				}
 			}
 			//no one is reachable, choose yourself
 			try {
-				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6790 + ID));
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6789));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -218,14 +219,15 @@ public class Fridge implements FridgeProto {
 				}
 			}
 		}
+		return null;
 	}
 
 	@Override
-	public int Election() throws AvroRemoteException {
+	public CharSequence Election() throws AvroRemoteException {
 		if(!this.participant){
-			this.startLeaderElection();
+			return this.startLeaderElection();
 		}
-		return 0;
+		return null;
 	}
 	
 	@Override

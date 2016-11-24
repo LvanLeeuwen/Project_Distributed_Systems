@@ -11,7 +11,7 @@
 		},
 		"Election" : {
 			"request" : [],
-			"response" : "int"
+			"response" : "string"
 		},
 		"ReceiveCoord" : {
 			"request" : [{"name" : "server_ip", "type" : "string"}],

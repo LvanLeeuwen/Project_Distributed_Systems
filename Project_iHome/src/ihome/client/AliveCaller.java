@@ -13,10 +13,7 @@ public class AliveCaller extends TimerTask{
 	
 	@Override
 	public void run(){
-		
-				u.send_alive();
-				
-	
+		u.send_alive();
 	}
 
 }

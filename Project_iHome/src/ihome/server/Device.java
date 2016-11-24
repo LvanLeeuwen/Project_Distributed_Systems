@@ -22,11 +22,11 @@ public class Device {
 		has_local_connect = -1;
 	}
 	
-	public Device(int t, boolean o, CharSequence i) {
+	public Device(int t, boolean o, CharSequence i, int h) {
 		type = t;
 		is_online = o;
 		IPAddress = i;
-		has_local_connect = -1;
+		has_local_connect = h;
 	}
 	
 

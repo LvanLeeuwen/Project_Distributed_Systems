@@ -130,7 +130,11 @@ public class Controller implements ServerProto
 			json.put("uidalive", uidalive);
 			/*
 			 * uidmap:
-			 * each device has a type and an online value
+			 * each device has:
+			 * 		type 
+			 * 		online value
+			 * 		IPAddress
+			 * 		has_local_connect
 			 */
 			JSONObject jsonuidmap = new JSONObject();
 			for (int id : uidmap.keySet()) {
@@ -139,6 +143,7 @@ public class Controller implements ServerProto
 				device.put("type", value.type);
 				device.put("is_online", value.is_online ? 1 : 0);
 				device.put("ip_address", value.IPAddress.toString());
+				device.put("has_local_connect", value.has_local_connect);
 				jsonuidmap.put(String.valueOf(id), device);
 			}
 			json.put("uidmap", jsonuidmap);
@@ -174,7 +179,11 @@ public class Controller implements ServerProto
 			json.put("uidalive", uidalive);
 			/*
 			 * uidmap:
-			 * each device has a type and an online value
+			 * each device has:
+			 * 		type 
+			 * 		online value
+			 * 		IPAddress
+			 * 		has_local_connect
 			 */
 			JSONObject jsonuidmap = new JSONObject();
 			for (int id : uidmap.keySet()) {
@@ -183,6 +192,7 @@ public class Controller implements ServerProto
 				device.put("type", value.type);
 				device.put("is_online", value.is_online ? 1 : 0);
 				device.put("ip_address", value.IPAddress.toString());
+				device.put("has_local_connect", value.has_local_connect);
 				jsonuidmap.put(String.valueOf(id), device);
 			}
 			json.put("uidmap", jsonuidmap);
@@ -220,6 +230,14 @@ public class Controller implements ServerProto
 			
 			nextID = json.getInt("nextID");
 			
+			/*
+			 * uidmap:
+			 * each device has:
+			 * 		type 
+			 * 		online value
+			 * 		IPAddress
+			 * 		has_local_connect
+			 */
 			uidmap.clear();
 			JSONObject jsonuidmap = json.getJSONObject("uidmap");
 			Iterator<String> keys = jsonuidmap.keys();
@@ -230,8 +248,10 @@ public class Controller implements ServerProto
 				int type = devices.getInt("type");
 				boolean online = devices.getInt("is_online") == 1 ? true : false;
 				CharSequence ip_address = devices.getString("ip_address");
-				uidmap.put(id, new Device(type, online, ip_address));
+				int has_local_connect = devices.getInt("has_local_connect");
+				uidmap.put(id, new Device(type, online, ip_address, has_local_connect));
 			}
+			
 			sensormap.clear();
 			JSONObject jsonsensormap = json.getJSONObject("sensormap");
 			keys = jsonsensormap.keys();
@@ -247,6 +267,7 @@ public class Controller implements ServerProto
 				}
 				sensormap.put(id, sensordata);
 			}
+			
 			uidalive.clear();
 			JSONObject jsonuidalive = json.getJSONObject("uidalive");
 			keys = jsonuidalive.keys();
@@ -551,7 +572,7 @@ public class Controller implements ServerProto
 	public Map<Integer, CharSequence> getPossibleParticipants(){
 		Map<Integer, CharSequence>out = new HashMap<Integer, CharSequence>();
 		for(int key : uidmap.keySet()){
-			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2) && uidmap.get(key).is_online){
+			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2)){
 				out.put(key, uidmap.get(key).IPAddress);
 			}
 		}
