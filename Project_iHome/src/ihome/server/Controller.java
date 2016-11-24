@@ -27,15 +27,18 @@ import org.apache.avro.ipc.specific.SpecificResponder;
 
 public class Controller implements ServerProto 
 {
+	// Controller variables
 	private static Server server = null;
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
 	private Map<Integer, ArrayList<Float>> sensormap = new HashMap<Integer, ArrayList<Float>>();
+	int sizeSensorMap = 10;
 	private Map<Integer, Boolean> uidalive = new HashMap<Integer, Boolean>();
 	private Map<Integer, Boolean> fridgeAlive = new HashMap<Integer, Boolean>();
 	private int nextID = 0;
 	private final int nr_types = 4;
 	private String IPAddress;
 	
+	// Alive variables
 	private Timer timer;
 	private AliveResponder ar;
 	
@@ -315,6 +318,9 @@ public class Controller implements ServerProto
 		}
 		try{
 			this.sensormap.get(uid).add(value);
+			while (this.sensormap.get(uid).size() > sizeSensorMap) {
+				this.sensormap.get(uid).remove(0);
+			}
 			this.sendController();
 			return "{\"Error\" : NULL}";
 
@@ -326,21 +332,9 @@ public class Controller implements ServerProto
 
 	@Override
 	public CharSequence get_temperature_list() throws AvroRemoteException {
-		/*
-		if(!uidmap.containsKey(sensor_id)) {
-			return "{\"Error\" : \"[Error] sensor_id not found in current session.\"}";
-		}
-		else if(!uidmap.containsKey(uid)){
-			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
-		}
-		else if(!sensormap.containsKey(sensor_id)){
-			return "{\"Error\" : \"[Error] Device with uid " + uid +  " is not heat sensor.\"}";
-		}
-		*/
 		try{
-			// For now return the 10 last temperatures.
 			ArrayList<Float> result = new ArrayList<Float>();
-			for (int size = 10; size > 0; size--) {
+			for (int size = sizeSensorMap; size > 0; size--) {
 				double mean = 0.0;
 				int n = 0;
 				for (ArrayList<Float> c : this.sensormap.values()) {
@@ -615,7 +609,8 @@ public class Controller implements ServerProto
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current en removed contents fridge");
 			System.out.println("6) Get temperature list");
-			System.out.println("7) send controller");
+			System.out.println("7) Get current temperature");
+			System.out.println("8) send controller");
 			
 			int in = reader.nextInt();
 			if(in == 1){
@@ -660,13 +655,14 @@ public class Controller implements ServerProto
 				int id = reader.nextInt();
 				controller.get_all_fridge_contents(id);
 			} else if (in == 6) {
+				System.out.println(controller.sensormap.toString());
+			} else if (in == 7) {
 				try {
-					System.out.println(controller.get_temperature_list());
+					System.out.println(controller.get_temperature_current());
 				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-			} else if (in == 7) {
+			} else if (in == 8) {
 				try {
 					controller.sendController();
 				} catch (AvroRemoteException e) {
