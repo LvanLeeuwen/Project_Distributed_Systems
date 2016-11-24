@@ -58,7 +58,9 @@ public class User implements UserProto {
 		controller = new Controller(ip_address);
 	}
 	
-	
+	/**************************
+	 ** SERVER FUNCTIONALITY **
+	 **************************/
 	public void connect_to_server() {
 		try {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
@@ -337,16 +339,9 @@ public class User implements UserProto {
 				int in = reader.nextInt();
 				if(in == 1){		// Get list of all devices and users.
 					reader.nextLine(); // Consume newline left-over
-					
-					
-					
 					System.out.println("What do you want to add to the fridge?");
 					String item = reader.nextLine();
-					
-					
-					
 					fridgeproxy.add_item(item);
-			
 				} else if(in == 2){
 					reader.nextLine(); // Consume newline left-over
 					System.out.println("What do you want to remove from the fridge?");
@@ -445,10 +440,8 @@ public class User implements UserProto {
 				int id = reader.nextInt();
 				controller.get_all_fridge_contents(id);
 			} else if (in == 6) {
-				System.out.println("Give id:");
-				int id = reader.nextInt();
 				try {
-					System.out.println(controller.get_temperature_list(id, id));
+					System.out.println(controller.get_temperature_list());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -548,20 +541,16 @@ public class User implements UserProto {
 					e.printStackTrace();
 				}
 			} else if (in == 5) {	// Get current temperature.
-				System.out.println("Give id:");
-				int id = reader.nextInt();
 				try {
-					CharSequence result = myUser.proxy.get_temperature_current(id);
+					CharSequence result = myUser.proxy.get_temperature_current();
 					System.out.println(result);
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			} else if (in == 6) { // Get history of temperature
-				System.out.println("Give id:");
-				int id = reader.nextInt();
 				try {
-					CharSequence result = myUser.proxy.get_temperature_list(id, id);
+					CharSequence result = myUser.proxy.get_temperature_list();
 					System.out.println(result);
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block

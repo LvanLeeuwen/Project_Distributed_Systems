@@ -334,6 +334,7 @@ public class Fridge implements FridgeProto {
 			
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get my controllers devices");
+			System.out.println("2) Show contents");
 			
 			int in = reader.nextInt();
 			if(in == 1){
@@ -341,6 +342,13 @@ public class Fridge implements FridgeProto {
 					System.out.println(myFridge.controller.get_all_devices());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else if (in == 2) {
+				myFridge.print_items();
+				try {
+					System.out.println(myFridge.send_current_items());
+				} catch (AvroRemoteException e) {
 					e.printStackTrace();
 				}
 			} else {

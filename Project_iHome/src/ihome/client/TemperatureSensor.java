@@ -58,6 +58,7 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
+			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
 			System.out.println("Connected to server");
 			CharSequence response = proxyASynchrone.connect(1, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
@@ -98,7 +99,7 @@ public class TemperatureSensor implements SensorProto {
 	
 	public void pullServer() {
 		try {
-			proxy.sendController();
+			proxyASynchrone.sendController();
 		} catch (AvroRemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -186,8 +187,9 @@ public class TemperatureSensor implements SensorProto {
 		String server_ip = reader.nextLine();
 		TemperatureSensor mySensor = new TemperatureSensor(ip_address, server_ip);
 		
-		
-		mySensor.connect_to_server(18f);
+		System.out.println("What is the initial temperature of this sensor?");
+		float initTemp = reader.nextFloat();
+		mySensor.connect_to_server(initTemp);
 		mySensor.runServer();
 		mySensor.pullServer();
 		
@@ -199,6 +201,7 @@ public class TemperatureSensor implements SensorProto {
 				mySensor.sent_temperature();
 			}
 		};
+		// Sent temperature every 10 seconds
 		timer.schedule(task, 10000, 10000);
 		
 		while (true) {

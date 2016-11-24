@@ -303,7 +303,8 @@ public class Controller implements ServerProto
 	}
 
 	@Override
-	public CharSequence get_temperature_list(int uid, int sensor_id) throws AvroRemoteException {
+	public CharSequence get_temperature_list() throws AvroRemoteException {
+		/*
 		if(!uidmap.containsKey(sensor_id)) {
 			return "{\"Error\" : \"[Error] sensor_id not found in current session.\"}";
 		}
@@ -313,8 +314,25 @@ public class Controller implements ServerProto
 		else if(!sensormap.containsKey(sensor_id)){
 			return "{\"Error\" : \"[Error] Device with uid " + uid +  " is not heat sensor.\"}";
 		}
+		*/
 		try{
-			return this.sensormap.get(sensor_id).toString();
+			// For now return the 10 last temperatures.
+			ArrayList<Float> result = new ArrayList<Float>();
+			for (int size = 10; size > 0; size--) {
+				double mean = 0.0;
+				int n = 0;
+				for (ArrayList<Float> c : this.sensormap.values()) {
+					if (c.size() >= size) {
+						n++;
+						mean += c.get(c.size() - size);
+					}
+				}
+				if (n != 0) {
+					result.add((float) (mean / n));
+				}
+			}
+			
+			return result.toString();
 
 		}catch (Exception e){
 
@@ -323,11 +341,8 @@ public class Controller implements ServerProto
 	}
 
 	@Override
-	public CharSequence get_temperature_current(int uid) throws AvroRemoteException {
-		if(!uidmap.containsKey(uid)) {
-			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
-		}
-		
+	public CharSequence get_temperature_current() throws AvroRemoteException {
+		// When there are multiple sensors, return average of last sent temperatures.
 		try{
 			double mean = 0.0;
 			int n = 0;
@@ -446,7 +461,7 @@ public class Controller implements ServerProto
 			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
 			FridgeProto proxy = SpecificRequestor.getClient(FridgeProto.class, trans);
 			CharSequence contents = proxy.send_current_items();
-			return "{\"Contents\" : contents, \"Error\" : NULL}";
+			return "{\"Contents\" : " + contents + ", \"Error\" : NULL}";
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -612,10 +627,8 @@ public class Controller implements ServerProto
 				int id = reader.nextInt();
 				controller.get_all_fridge_contents(id);
 			} else if (in == 6) {
-				System.out.println("Give id:");
-				int id = reader.nextInt();
 				try {
-					System.out.println(controller.get_temperature_list(id, id));
+					System.out.println(controller.get_temperature_list());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
