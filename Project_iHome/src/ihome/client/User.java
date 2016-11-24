@@ -74,6 +74,7 @@ public class User implements UserProto {
 			name = "user" + ID;
 			System.out.println("username: " + name + " ID: " + ID + " Entered the house");
 			
+			// Start timer for I'm alive
 			timer = new Timer();
 			ac = new AliveCaller(this);
 			
@@ -87,13 +88,9 @@ public class User implements UserProto {
 	}
 	
 	public void send_alive(){
-		
 		try {
-			
 			proxy.i_am_alive(this.ID);
-			
 		} catch (AvroRemoteException e) {
-			
 			if (!this.participant) {
 				try {
 					this.Election();

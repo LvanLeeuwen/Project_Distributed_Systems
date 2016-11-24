@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Timer;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -26,6 +27,8 @@ import ihome.proto.lightside.LightProto;
 
 public class Fridge implements FridgeProto {
 	
+	final static int wtna = Controller.check_alive_interval / 3; 
+	
 	private Server server = null;
 	private Controller controller;
 	private Transceiver fridge;
@@ -39,6 +42,10 @@ public class Fridge implements FridgeProto {
 	private boolean opened = false;
 	private ArrayList<CharSequence> items = new ArrayList<CharSequence>();
 	private ArrayList<CharSequence> allItems = new ArrayList<CharSequence>();
+	
+	// Alive caller variables
+	private AliveCaller ac;
+	private Timer timer;
 	
 	// Leader election variables
 	private Boolean participant = false;
@@ -71,6 +78,12 @@ public class Fridge implements FridgeProto {
 			ID = json.getInt("UID");
 			name = "fridge" + ID;
 			System.out.println("name: " + name + " ID: " + ID);
+			
+			// Start timer for I'm alive
+			timer = new Timer();
+			ac = new AliveCaller(this);
+			
+			timer.scheduleAtFixedRate(ac, wtna, wtna);
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
 			e.printStackTrace(System.err);
@@ -107,6 +120,28 @@ public class Fridge implements FridgeProto {
 		} catch (AvroRemoteException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		}
+	}
+	
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
+	public void send_alive(){
+		try {
+			proxy.i_am_alive(this.ID);
+		} catch (AvroRemoteException e) {
+			if (!this.participant) {
+				try {
+					this.Election();
+				} catch (AvroRemoteException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+			/*
+			System.err.println("[error] failed to send I'm alive");
+			e.printStackTrace();
+			*/
 		}
 	}
 	
