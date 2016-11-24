@@ -31,6 +31,7 @@ public class Controller implements ServerProto
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
 	private Map<Integer, ArrayList<Float>> sensormap = new HashMap<Integer, ArrayList<Float>>();
 	private Map<Integer, Boolean> uidalive = new HashMap<Integer, Boolean>();
+	private Map<Integer, Boolean> fridgeAlive = new HashMap<Integer, Boolean>();
 	private int nextID = 0;
 	private final int nr_types = 4;
 	private String IPAddress;
@@ -446,16 +447,27 @@ public class Controller implements ServerProto
 	
 	@Override
 	public int i_am_alive(int uid) throws AvroRemoteException {
-		this.uidalive.put(uid, true);
+		if (uidmap.get(uid).type == 0) {
+			this.uidalive.put(uid, true);
+		} else if (uidmap.get(uid).type == 2) {
+			this.fridgeAlive.put(uid, true);
+		}
 		return 0;
 	}
 	
 	public void check_alive(){
+		// Check alive users
 		for(int i : this.uidalive.keySet()){
 			this.uidmap.get(i).is_online = this.uidalive.get(i);
 			this.uidalive.put(i, false);
 		}
+		// Check alive fridges
+		for (int i : this.fridgeAlive.keySet()) {
+			this.uidmap.get(i).is_online = this.fridgeAlive.get(i);
+			this.fridgeAlive.put(i, false);
+		}
 		
+		// Check if a user is connected to a fridge
 		for(int j : this.uidmap.keySet()){
 			int c_id = this.uidmap.get(j).has_local_connect;
 			if(c_id >= 0){
