@@ -16,6 +16,14 @@
 		"ReceiveCoord" : {
 			"request" : [{"name" : "server_ip", "type" : "string"}],
 			"response" : "int"
+		},
+		"notify_user_enters" : {
+			"request" : [{"name" : "uid", "type" : "int"}],
+			"response" : "int"
+		},
+		"notify_user_leaves" : {
+			"request" : [{"name" : "uid", "type" : "int"}],
+			"response" : "int"
 		}
 	}
 }

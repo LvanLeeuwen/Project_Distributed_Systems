@@ -66,6 +66,7 @@ public class TemperatureSensor implements SensorProto {
 			ID = json.getInt("UID");
 			name = "sensor" + ID;
 			temperature = initTemp;
+			proxyASynchrone.update_temperature(ID, temperature, future);
 			System.out.println("name: " + name + " ID: " + ID);
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");

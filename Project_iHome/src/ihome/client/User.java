@@ -29,6 +29,7 @@ public class User implements UserProto {
 	
 	final static int wtna = Controller.check_alive_interval / 3; 
 	
+	// Server variables
 	private Controller controller;
 	private Server server = null;
 	private Transceiver user;
@@ -39,7 +40,7 @@ public class User implements UserProto {
 	private int ID;
 	private String IPAddress;
 	private String server_ip_address;
-	
+	private Boolean inHouse = true;
 	
 	// Alive caller variables
 	private AliveCaller ac;
@@ -48,6 +49,7 @@ public class User implements UserProto {
 	//leader election variables
 	private Boolean participant = false;
 	private Boolean isLeader = false;
+	
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -58,6 +60,7 @@ public class User implements UserProto {
 		server_ip_address = server_ip;
 		controller = new Controller(ip_address);
 	}
+	
 	
 	/**************************
 	 ** SERVER FUNCTIONALITY **
@@ -87,9 +90,47 @@ public class User implements UserProto {
 		}
 	}
 	
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(UserProto.class,
+					this), new InetSocketAddress(IPAddress, 6790+ID));
+		}catch (IOException e){
+			System.err.println("[error] failed to start server");
+			e.printStackTrace(System.err);
+			System.exit(1);
+
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	public void pullServer() {
+		try {
+			proxy.sendController();
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
 	public void send_alive(){
 		try {
-			proxy.i_am_alive(this.ID);
+			if (inHouse) {
+				proxy.i_am_alive(this.ID);
+			}
 		} catch (AvroRemoteException e) {
 			if (!this.participant) {
 				try {
@@ -99,149 +140,13 @@ public class User implements UserProto {
 					e1.printStackTrace();
 				}
 			}
-			/*
-			System.err.println("[error] failed to send I'm alive");
-			e.printStackTrace();
-			*/
 		}
 	}
 	
-	public void exit() {
-		try {
-			CharSequence response = proxy.disconnect(ID);
-			JSONObject json = new JSONObject(response.toString());
-			if (!json.isNull("Error")) throw new Exception();
-			System.out.println("username: " + name + " ID: " + ID + " Leaved the house");
-		} catch (Exception e) {
-			System.out.println(e.getMessage());
-		}
-	}
 	
-	/******************************
-	 ** CONTROLLER FUNCTIONALITY **
-	 ******************************/
-	
-	/*public CharSequence startLeaderElection(){
-		
-		y
-		
-		// Check if there are no other candidates
-		System.out.println(candidates.toString());
-		System.out.println(L.toString());
-		if(L.size() <= 0){
-			System.out.println("L is empty" );
-			this.participant = false;
-			this.controller.runServer();
-			
-			// Make me the server
-			try {
-				if(!isLeader){
-					user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6789));
-					proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
-					isLeader = true;
-				}
-				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		
-			// send Coordinator
-			for (int key : S.keySet()) {
-				try {
-					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(S.get(key).toString(), 6790 + key));
-					if (this.controller.getUidmap().get(key).type == 0) {
-						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-						uproxy.ReceiveCoord(this.IPAddress);
-					} else if (this.controller.getUidmap().get(key).type == 1) {
-						SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-						sproxy.ReceiveCoord(this.IPAddress);
-					} else if (this.controller.getUidmap().get(key).type == 2) {
-						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-						fproxy.ReceiveCoord(this.IPAddress);
-					} else if (this.controller.getUidmap().get(key).type == 3) {
-						LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-						lproxy.ReceiveCoord(this.IPAddress);
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			
-			return this.server_ip_address;
-			
-		} else{ //not the highest id
-			this.participant = true;
-			
-			System.out.println("test");
-			int number_of_failures = 0;
-			
-			//try to contact someone with a higher id
-			for(int key : L.keySet()){
-				try {
-					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(L.get(key).toString(), 6790 + key));
-					if(this.controller.getUidmap().get(key).type == 0){
-						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-						return uproxy.Election();
-					} else{
-						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-						return fproxy.Election();
-					}
-				} catch (IOException e) {
-					number_of_failures++;
-				}
-			}
-			/*
-			//no one is reachable, choose yourself
-			if (number_of_failures == L.size()) {
-				try {
-					user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6789));
-					proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-				// send Coordinator
-				for (int key : S.keySet()) {
-					try {
-						Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(S.get(key).toString(), 6790 + key));
-						if (this.controller.getUidmap().get(key).type == 0) {
-							UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-							uproxy.ReceiveCoord(this.IPAddress);
-						} else if (this.controller.getUidmap().get(key).type == 1) {
-							SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-							sproxy.ReceiveCoord(this.IPAddress);
-						} else if (this.controller.getUidmap().get(key).type == 2) {
-							FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-							fproxy.ReceiveCoord(this.IPAddress);
-						} else if (this.controller.getUidmap().get(key).type == 3) {
-							LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-							lproxy.ReceiveCoord(this.IPAddress);
-						}
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-				return this.server_ip_address;
-			}
-			
-		}
-		return null;
-	}
-	
-	@Override
-	public CharSequence Election() throws AvroRemoteException {
-		if(!this.participant){
-			return this.startLeaderElection();
-		}
-		return null;
-	}*/
-	
-	
-	
+	/****************************
+	 ** ELECTION FUNCTIONALITY **
+	 ****************************/
 	@Override
 	public CharSequence Election() throws AvroRemoteException{
 		
@@ -367,20 +272,10 @@ public class User implements UserProto {
 			}
 		}
 		
-		
-		
 		this.participant = false;
 		return " ";
 		
 	}
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	@Override
 	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
@@ -399,50 +294,6 @@ public class User implements UserProto {
 		return 0;
 	}
 	
-	
-	
-	/******************************
-	 ** CONTROLLER FUNCTIONALITY **
-	 ******************************/
-	
-	@Override
-	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		controller.updateController(jsonController);
-		return "";
-	}
-	
-	
-	public void runServer() {
-		try
-		{
-			server = new SaslSocketServer(new SpecificResponder(UserProto.class,
-					this), new InetSocketAddress(IPAddress, 6790+ID));
-		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-
-		}
-		server.start();
-	}
-	
-	public void stopServer() {
-		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	public void pullServer() {
-		try {
-			proxy.sendController();
-		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 	
 	/********************
 	 ** FRIDGE CONNECT **
@@ -512,11 +363,8 @@ public class User implements UserProto {
 				
 			}
 			
-			
 			proxy.release_fridge(fridgeid);
-			
-			
-			
+				
 		} catch (IOException e) {
 			try {
 				proxy.report_offline(fridgeid);
@@ -527,8 +375,6 @@ public class User implements UserProto {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
-		
 	}
 	
 	@Override
@@ -540,6 +386,11 @@ public class User implements UserProto {
 	/************************
 	 * CONTROLLER FUNCTIONS *
 	 ************************/
+	@Override
+	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
+		controller.updateController(jsonController);
+		return "";
+	}
 	
 	public void useController()
 	{
@@ -615,7 +466,51 @@ public class User implements UserProto {
 			}
 		}
 	}
-
+	
+	
+	/*********************
+	 * ENTER/LEAVE HOUSE *
+	 *********************/
+	public void enterHouse() {
+		if (!inHouse) {
+			inHouse = true;
+		}
+		// Notify controller
+		try {
+			proxy.user_enters(this.ID);
+			System.out.println("I entered the house!");
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return;
+	}
+	
+	public void leaveHouse() {
+		if (inHouse) {
+			inHouse = false;
+		}
+		// Notify controller
+		try {
+			proxy.user_leaves(this.ID);
+			System.out.println("I left the house!");
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return;
+	}
+	
+	@Override
+	public int notify_user_enters(int uid) throws AvroRemoteException {
+		System.out.println("User " + uid + " entered the house!");
+		return 0;
+	}
+	@Override
+	public int notify_user_leaves(int uid) throws AvroRemoteException {
+		System.out.println("User " + uid + " left the house!");
+		return 0;
+	}
 	
 	/**********
 	 ** MAIN **
@@ -658,6 +553,8 @@ public class User implements UserProto {
 			System.out.println("8) Show my controllers devices");
 			System.out.println("9) Start leader election");
 			System.out.println("10) use Controller");
+			System.out.println("11) Leave house");
+			System.out.println("12) Enter house");
 
 			
 			int in = reader.nextInt();
@@ -734,6 +631,10 @@ public class User implements UserProto {
 				}
 			} else if (in == 10){
 				myUser.useController();
+			} else if (in == 11) {
+				myUser.leaveHouse();
+			} else if (in == 12) {
+				myUser.enterHouse();
 			}else {
 			
 				break;
