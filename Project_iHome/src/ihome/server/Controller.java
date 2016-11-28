@@ -155,12 +155,12 @@ public class Controller implements ServerProto
 			// Send json
 			for (int id : uidmap.keySet()) {
 				int type = uidmap.get(id).type;
-				if (type == 0) {
+				if (type == 0 && uidmap.get(id).is_online) {
 					// Send me to user
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
-				} else if (type == 2) {
+				} else if (type == 2 && uidmap.get(id).is_online) {
 					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
@@ -578,7 +578,7 @@ public class Controller implements ServerProto
 	public Map<Integer, CharSequence> getPossibleParticipants(){
 		Map<Integer, CharSequence>out = new HashMap<Integer, CharSequence>();
 		for(int key : uidmap.keySet()){
-			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2)){
+			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2) && uidmap.get(key).is_online){
 				out.put(key, uidmap.get(key).IPAddress);
 			}
 		}
