@@ -12,6 +12,14 @@
 		"ReceiveCoord" : {
 			"request" : [{"name" : "server_ip", "type" : "string"}],
 			"response" : "int"
+		},
+		"turn_off" : {
+			"request" : [],
+			"response" : "int"
+		},
+		"turn_back" : {
+			"request" : [],
+			"response" : "int"
 		}
 	}
 }
