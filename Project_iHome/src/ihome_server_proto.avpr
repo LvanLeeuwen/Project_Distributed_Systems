@@ -65,6 +65,14 @@
 		"sendController" :{
 			"request" : [],
 			"response" : "int"
-		}		
+		},
+		"user_enters" : {	
+			"request" : [{"name" : "uid", "type" : "int"}],
+			"response" : "string"
+		},
+		"user_leaves" : {
+			"request" : [{"name" : "uid", "type" : "int"}],
+			"response" : "string"
+		}
 	}
 }

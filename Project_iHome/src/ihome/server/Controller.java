@@ -155,12 +155,12 @@ public class Controller implements ServerProto
 			// Send json
 			for (int id : uidmap.keySet()) {
 				int type = uidmap.get(id).type;
-				if (type == 0) {
+				if (type == 0 && uidmap.get(id).is_online) {
 					// Send me to user
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
-				} else if (type == 2) {
+				} else if (type == 2 && uidmap.get(id).is_online) {
 					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
@@ -578,7 +578,7 @@ public class Controller implements ServerProto
 	public Map<Integer, CharSequence> getPossibleParticipants(){
 		Map<Integer, CharSequence>out = new HashMap<Integer, CharSequence>();
 		for(int key : uidmap.keySet()){
-			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2)){
+			if((uidmap.get(key).type == 0 || uidmap.get(key).type == 2) && uidmap.get(key).is_online){
 				out.put(key, uidmap.get(key).IPAddress);
 			}
 		}
@@ -589,6 +589,56 @@ public class Controller implements ServerProto
 		return this.uidmap;
 	}
 	
+	/**********************
+	 * USER ENTERS/LEAVES *
+	 **********************/
+	@Override
+	public CharSequence user_enters(int uid) throws AvroRemoteException {
+		if (!this.uidmap.containsKey(uid)) {
+			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
+		}
+		try {
+			this.uidalive.put(uid, true);
+			this.uidmap.get(uid).is_online = true;
+			this.sendController();
+			// Send message to all other users
+			for (int id : uidmap.keySet()) {
+				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+					int response = userproxy.notify_user_enters(uid);
+				}
+			}
+			return "{\"Error\" : NULL}";
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	@Override
+	public CharSequence user_leaves(int uid) throws AvroRemoteException {
+		if (!this.uidmap.containsKey(uid)) {
+			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
+		}
+		try {
+			this.uidalive.put(uid, false);
+			this.uidmap.get(uid).is_online = false;
+			this.sendController();
+			// Send message to all other users
+			// Send message to all other users
+			for (int id : uidmap.keySet()) {
+				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+					int response = userproxy.notify_user_leaves(uid);
+				}
+			}
+			return "{\"Error\" : NULL}";
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
 	
 	
 	/*************************
