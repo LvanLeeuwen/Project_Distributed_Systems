@@ -290,6 +290,7 @@ public class User implements UserProto {
 			e.printStackTrace();
 		}
 		this.participant = false;
+		this.isLeader = false;
 		System.out.println("New leader: " + server_ip);
 		return 0;
 	}

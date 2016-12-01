@@ -294,6 +294,7 @@ public class Fridge implements FridgeProto {
 			e.printStackTrace();
 		}
 		this.participant = false;
+		this.isLeader = false;
 		System.out.println("New leader: " + server_ip);
 		return 0;
 	}

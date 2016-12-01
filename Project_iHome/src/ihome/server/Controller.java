@@ -55,12 +55,6 @@ public class Controller implements ServerProto
 	 ******************/
 	public Controller() {}
 	public Controller(String ip_address, boolean original){
-		timer = new Timer();
-		ar = new AliveResponder(this);
-		
-		pingTimer = new Timer();
-		ps = new PingServer(this);
-		
 		IPAddress = ip_address;
 		isOriginal = original;
 	}
@@ -113,7 +107,8 @@ public class Controller implements ServerProto
 	public void runServer() {
 		try
 		{
-			
+			timer = new Timer();
+			ar = new AliveResponder(this);
 			timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
 			if (isOriginal) {
 				server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
@@ -121,6 +116,8 @@ public class Controller implements ServerProto
 			} else {
 				server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
 						this), new InetSocketAddress(IPAddress, 6788));
+				pingTimer = new Timer();
+				ps = new PingServer(this);
 				pingTimer.scheduleAtFixedRate(ps, check_alive_interval, check_alive_interval);
 			}
 		}catch (IOException e){
@@ -132,12 +129,12 @@ public class Controller implements ServerProto
 	}
 	
 	public void stopServer() {
-		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		server.close();
+		
+		timer.cancel();
+		timer.purge();
+		pingTimer.cancel();
+		pingTimer.purge();
 	}
 	
 	public void pingServer() {
@@ -153,7 +150,6 @@ public class Controller implements ServerProto
 			
 		} catch (Exception e) {
 			// Continue pinging
-			System.out.println("Ping");
 		}
 	}
 	
@@ -573,6 +569,7 @@ public class Controller implements ServerProto
 	
 	@Override
 	public int i_am_alive(int uid) throws AvroRemoteException {
+		System.out.println("Alive received from " + uid);
 		if (uidmap.get(uid).type == 0) {
 			this.uidalive.put(uid, true);
 		} else if (uidmap.get(uid).type == 2) {
