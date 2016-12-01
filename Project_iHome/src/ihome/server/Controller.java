@@ -52,7 +52,7 @@ public class Controller implements ServerProto
 		timer = new Timer();
 		ar = new AliveResponder(this);
 		
-		timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
+		//timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
 		
 		IPAddress = ip_address;
 	}
@@ -105,6 +105,8 @@ public class Controller implements ServerProto
 	public void runServer(){
 		try
 		{
+			
+			timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
 			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
 					this), new InetSocketAddress(IPAddress, 6789));
 		}catch (IOException e){
@@ -415,6 +417,40 @@ public class Controller implements ServerProto
 		return null;
 	}
 	
+	private void turn_of_lights(){
+		for(int key : uidmap.keySet()){
+			if(uidmap.get(key).type == 3){
+				Transceiver trans;
+				try {
+					trans = new SaslSocketTransceiver(new InetSocketAddress(6790+key));
+					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, trans);
+					lightproxy.turn_off();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
+		}
+	}
+	
+	private void turn_back_lights(){
+		for(int key : uidmap.keySet()){
+			if(uidmap.get(key).type == 3){
+				Transceiver trans;
+				try {
+					trans = new SaslSocketTransceiver(new InetSocketAddress(6790+key));
+					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, trans);
+					lightproxy.turn_back();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+			}
+		}
+	}
+	
 	@Override
 	public CharSequence switch_state_light(int uid) throws AvroRemoteException {
 		Device light = uidmap.get(uid);
@@ -449,11 +485,16 @@ public class Controller implements ServerProto
 		return 0;
 	}
 	
+	private int old_nr_users = 0;
 	public void check_alive(){
 		// Check alive users
+		
+		int nr_users = 0;
 		for(int i : this.uidalive.keySet()){
 			this.uidmap.get(i).is_online = this.uidalive.get(i);
 			this.uidalive.put(i, false);
+			if(this.uidmap.get(i).is_online)
+				nr_users++;
 		}
 		// Check alive fridges
 		for (int i : this.fridgeAlive.keySet()) {
@@ -471,6 +512,17 @@ public class Controller implements ServerProto
 					
 			}
 		}
+		
+		//System.out.println(nr_users);
+		if(nr_users == 0 && old_nr_users != 0){
+			System.out.println("turn off all lights sinds no users");
+			this.turn_of_lights();
+		}
+		else if (nr_users != 0 && old_nr_users == 0){
+			System.out.println("return lights to old state");
+			this.turn_back_lights();
+		}
+		old_nr_users = nr_users;
 	}
 	
 	
@@ -654,7 +706,7 @@ public class Controller implements ServerProto
 		while(true){
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get in-session list");
-			//System.out.println("2) Get state light");
+			System.out.println("2) Get state light");
 			System.out.println("3) Switch state light");
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current en removed contents fridge");
@@ -673,16 +725,15 @@ public class Controller implements ServerProto
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}*/
-			} /*else if(in ==2){
-				System.out.println("Give id:");
-				int id = reader.nextInt();
+			} else if(in ==2){
+				
 				try {
-					controller.get_light_state(id);
+					System.out.println(controller.get_lights_state());
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-			} */else if(in ==3){
+			} else if(in ==3){
 				System.out.println("Give id:");
 				int id = reader.nextInt();
 				try {
@@ -719,6 +770,9 @@ public class Controller implements ServerProto
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+			} else if(in == 9){
+				controller.turn_of_lights();
+				
 			} else {
 				break;
 			}

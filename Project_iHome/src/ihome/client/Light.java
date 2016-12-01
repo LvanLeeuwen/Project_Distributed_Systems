@@ -77,6 +77,22 @@ public class Light implements LightProto {
 		return "{\"Error\" : NULL}";
 	}
 	
+	
+	private String oldstate = "off";
+	
+	@Override
+	public int turn_off() throws AvroRemoteException {
+		oldstate = state;
+		state = "off";
+		return 0;
+	}
+	
+	@Override
+	public int turn_back() throws AvroRemoteException {
+		state = oldstate;
+		return 0;
+	}
+	
 	public void runServer() {
 		try
 		{
@@ -142,4 +158,6 @@ public class Light implements LightProto {
 		
 		//myLight.stopServer();
 	}
+	
+	
 }
