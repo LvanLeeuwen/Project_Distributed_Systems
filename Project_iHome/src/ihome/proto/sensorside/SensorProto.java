@@ -8,12 +8,12 @@ package ihome.proto.sensorside;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public interface SensorProto {
-  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"SensorProto\",\"namespace\":\"ihome.proto.sensorside\",\"types\":[],\"messages\":{\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"}],\"response\":\"int\"}}}");
-  int ReceiveCoord(java.lang.CharSequence server_ip) throws org.apache.avro.AvroRemoteException;
+  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"SensorProto\",\"namespace\":\"ihome.proto.sensorside\",\"types\":[],\"messages\":{\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"}],\"response\":\"int\"}}}");
+  int ReceiveCoord(java.lang.CharSequence server_ip, int port) throws org.apache.avro.AvroRemoteException;
 
   @SuppressWarnings("all")
   public interface Callback extends SensorProto {
     public static final org.apache.avro.Protocol PROTOCOL = ihome.proto.sensorside.SensorProto.PROTOCOL;
-    void ReceiveCoord(java.lang.CharSequence server_ip, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
+    void ReceiveCoord(java.lang.CharSequence server_ip, int port, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
   }
 }

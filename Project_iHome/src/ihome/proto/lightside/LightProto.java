@@ -8,10 +8,10 @@ package ihome.proto.lightside;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public interface LightProto {
-  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"LightProto\",\"namespace\":\"ihome.proto.lightside\",\"types\":[],\"messages\":{\"send_state\":{\"request\":[],\"response\":\"string\"},\"switch_state\":{\"request\":[],\"response\":\"string\"},\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"}],\"response\":\"int\"},\"turn_off\":{\"request\":[],\"response\":\"int\"},\"turn_back\":{\"request\":[],\"response\":\"int\"}}}");
+  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"LightProto\",\"namespace\":\"ihome.proto.lightside\",\"types\":[],\"messages\":{\"send_state\":{\"request\":[],\"response\":\"string\"},\"switch_state\":{\"request\":[],\"response\":\"string\"},\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"}],\"response\":\"int\"},\"turn_off\":{\"request\":[],\"response\":\"int\"},\"turn_back\":{\"request\":[],\"response\":\"int\"}}}");
   java.lang.CharSequence send_state() throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence switch_state() throws org.apache.avro.AvroRemoteException;
-  int ReceiveCoord(java.lang.CharSequence server_ip) throws org.apache.avro.AvroRemoteException;
+  int ReceiveCoord(java.lang.CharSequence server_ip, int port) throws org.apache.avro.AvroRemoteException;
   int turn_off() throws org.apache.avro.AvroRemoteException;
   int turn_back() throws org.apache.avro.AvroRemoteException;
 
@@ -20,7 +20,7 @@ public interface LightProto {
     public static final org.apache.avro.Protocol PROTOCOL = ihome.proto.lightside.LightProto.PROTOCOL;
     void send_state(org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
     void switch_state(org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
-    void ReceiveCoord(java.lang.CharSequence server_ip, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
+    void ReceiveCoord(java.lang.CharSequence server_ip, int port, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
     void turn_off(org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
     void turn_back(org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
   }

@@ -1,5 +1,6 @@
 package ihome.server;
 
+import ihome.proto.sensorside.SensorProto;
 import ihome.proto.serverside.ServerProto;
 import ihome.client.AliveCaller;
 import ihome.proto.lightside.LightProto;
@@ -37,10 +38,15 @@ public class Controller implements ServerProto
 	private int nextID = 0;
 	private final int nr_types = 4;
 	private String IPAddress;
+	private boolean isOriginal;
 	
 	// Alive variables
 	private Timer timer;
 	private AliveResponder ar;
+	
+	// Ping server variables
+	private Timer pingTimer;
+	private PingServer ps;
 	
 	public static final int check_alive_interval = 1000;
 	
@@ -48,13 +54,9 @@ public class Controller implements ServerProto
 	 ** CONSTRUCTORS **
 	 ******************/
 	public Controller() {}
-	public Controller(String ip_address){
-		timer = new Timer();
-		ar = new AliveResponder(this);
-		
-		//timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
-		
+	public Controller(String ip_address, boolean original){
 		IPAddress = ip_address;
+		isOriginal = original;
 	}
 
 	
@@ -102,13 +104,22 @@ public class Controller implements ServerProto
 		
 	}
 	
-	public void runServer(){
+	public void runServer() {
 		try
 		{
-			
+			timer = new Timer();
+			ar = new AliveResponder(this);
 			timer.scheduleAtFixedRate(ar, check_alive_interval, check_alive_interval);
-			server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
-					this), new InetSocketAddress(IPAddress, 6789));
+			if (isOriginal) {
+				server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
+						this), new InetSocketAddress(IPAddress, 6789));
+			} else {
+				server = new SaslSocketServer(new SpecificResponder(ServerProto.class,
+						this), new InetSocketAddress(IPAddress, 6788));
+				pingTimer = new Timer();
+				ps = new PingServer(this);
+				pingTimer.scheduleAtFixedRate(ps, check_alive_interval, check_alive_interval);
+			}
 		}catch (IOException e){
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
@@ -118,14 +129,56 @@ public class Controller implements ServerProto
 	}
 	
 	public void stopServer() {
+		server.close();
+		
+		timer.cancel();
+		timer.purge();
+		pingTimer.cancel();
+		pingTimer.purge();
+	}
+	
+	public void pingServer() {
 		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			Transceiver pingedServer = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			ServerProto serverproxy = SpecificRequestor.getClient(ServerProto.class, pingedServer);
+			// Original server back online. 
+			this.sendControllerToController();
+			// Let new server send its coordinates
+			serverproxy.sendCoord();
+			// Stop current server
+			this.stopServer();
+			
+		} catch (Exception e) {
+			// Continue pinging
 		}
 	}
-
+	
+	@Override
+	public CharSequence sendCoord() throws AvroRemoteException {
+		System.out.println("sendCoord");
+		for (int key : uidmap.keySet()) {
+			try {
+				Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(uidmap.get(key).IPAddress.toString(), 6790 + key));
+				if (uidmap.get(key).type == 0) {
+					UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, trans);
+					uproxy.ReceiveCoord(this.IPAddress, 6789);
+				} else if (uidmap.get(key).type == 1) {
+					SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, trans);
+					sproxy.ReceiveCoord(this.IPAddress, 6789);
+				} else if (uidmap.get(key).type == 2) {
+					FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, trans);
+					fproxy.ReceiveCoord(this.IPAddress, 6789);
+				} else if (uidmap.get(key).type == 3) {
+					LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, trans);
+					lproxy.ReceiveCoord(this.IPAddress, 6789);
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+		return "";
+	}
+	
 	@Override
 	public int sendController() throws AvroRemoteException {
 		try {
@@ -229,8 +282,47 @@ public class Controller implements ServerProto
 		}
 		return;
 	}
+	
+	public void sendControllerToController() {
+		try {
+			// Create JSON object
+			JSONObject json = new JSONObject();
+			json.put("nextID", nextID);
+			json.put("sensormap", sensormap);
+			json.put("uidalive", uidalive);
+			/*
+			 * uidmap:
+			 * each device has:
+			 * 		type 
+			 * 		online value
+			 * 		IPAddress
+			 * 		has_local_connect
+			 */
+			JSONObject jsonuidmap = new JSONObject();
+			for (int id : uidmap.keySet()) {
+				Device value = uidmap.get(id);
+				JSONObject device = new JSONObject();
+				device.put("type", value.type);
+				device.put("is_online", value.is_online ? 1 : 0);
+				device.put("ip_address", value.IPAddress.toString());
+				device.put("has_local_connect", value.has_local_connect);
+				jsonuidmap.put(String.valueOf(id), device);
+			}
+			json.put("uidmap", jsonuidmap);
+			
+			// Send json
+			Transceiver pingedServer = new SaslSocketTransceiver(new InetSocketAddress(6789));
+			ServerProto serverproxy = SpecificRequestor.getClient(ServerProto.class, pingedServer);
+			CharSequence response = serverproxy.updateController(json.toString());
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}
+		return;
+	}
 
-	public CharSequence updateController(CharSequence jsonController) {
+	@Override
+	public CharSequence updateController(CharSequence jsonController) throws AvroRemoteException {
 		try {
 			JSONObject json = new JSONObject(jsonController.toString());
 			
@@ -477,6 +569,7 @@ public class Controller implements ServerProto
 	
 	@Override
 	public int i_am_alive(int uid) throws AvroRemoteException {
+		System.out.println("Alive received from " + uid);
 		if (uidmap.get(uid).type == 0) {
 			this.uidalive.put(uid, true);
 		} else if (uidmap.get(uid).type == 2) {
@@ -700,7 +793,7 @@ public class Controller implements ServerProto
 		Scanner reader = new Scanner(System.in);
 		System.out.println("What is your IP address?");
 		String server_ip = reader.nextLine();
-		Controller controller = new Controller(server_ip);
+		Controller controller = new Controller(server_ip, true);
 		controller.runServer();
 
 		while(true){
@@ -780,6 +873,5 @@ public class Controller implements ServerProto
 
 		//controller.get_light_state(0);
 		controller.stopServer();
-	}
-	
+	}	
 }

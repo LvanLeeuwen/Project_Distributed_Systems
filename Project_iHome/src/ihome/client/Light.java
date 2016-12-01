@@ -126,10 +126,10 @@ public class Light implements LightProto {
 	}
 	
 	@Override
-	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+	public int ReceiveCoord(CharSequence server_ip, int port) throws AvroRemoteException {
 		this.server_ip_address = server_ip.toString();
 		try {
-			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

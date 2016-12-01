@@ -163,10 +163,10 @@ public class TemperatureSensor implements SensorProto {
 	 ** ELECTION FUNCTIONALITY **
 	 ****************************/
 	@Override
-	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+	public int ReceiveCoord(CharSequence server_ip, int port) throws AvroRemoteException {
 		this.server_ip_address = server_ip.toString();
 		try {
-			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

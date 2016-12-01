@@ -73,6 +73,14 @@
 		"user_leaves" : {
 			"request" : [{"name" : "uid", "type" : "int"}],
 			"response" : "string"
+		},
+		"updateController" : {
+			"request" : [{"name" : "jsonController", "type" : "string"}],
+			"response" : "string"
+		},
+		"sendCoord" : {
+			"request" : [],
+			"response" : "string"
 		}
 	}
 }

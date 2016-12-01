@@ -60,7 +60,7 @@ public class Fridge implements FridgeProto {
 	public Fridge(String ip_address, String server_ip) {
 		IPAddress = ip_address;
 		server_ip_address = server_ip;
-		controller = new Controller(ip_address);
+		controller = new Controller(ip_address, false);
 	}
 	
 	
@@ -176,7 +176,7 @@ public class Fridge implements FridgeProto {
 			// Make me the server
 			try {
 				if(!isLeader){
-					fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6789));
+					fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 					proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
 					isLeader = true;
 				}
@@ -192,16 +192,16 @@ public class Fridge implements FridgeProto {
 					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(S.get(key).toString(), 6790 + key));
 					if (this.controller.getUidmap().get(key).type == 0) {
 						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-						uproxy.ReceiveCoord(this.IPAddress);
+						uproxy.ReceiveCoord(this.IPAddress, 6788);
 					} else if (this.controller.getUidmap().get(key).type == 1) {
 						SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-						sproxy.ReceiveCoord(this.IPAddress);
+						sproxy.ReceiveCoord(this.IPAddress, 6788);
 					} else if (this.controller.getUidmap().get(key).type == 2) {
 						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-						fproxy.ReceiveCoord(this.IPAddress);
+						fproxy.ReceiveCoord(this.IPAddress, 6788);
 					} else if (this.controller.getUidmap().get(key).type == 3) {
 						LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-						lproxy.ReceiveCoord(this.IPAddress);
+						lproxy.ReceiveCoord(this.IPAddress, 6788);
 					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -238,7 +238,7 @@ public class Fridge implements FridgeProto {
 				// Make me the server
 				try {
 					if(!isLeader){
-						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6789));
+						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
 						isLeader = true;
 					}
@@ -254,16 +254,16 @@ public class Fridge implements FridgeProto {
 						Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(S.get(key).toString(), 6790 + key));
 						if (this.controller.getUidmap().get(key).type == 0) {
 							UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-							uproxy.ReceiveCoord(this.IPAddress);
+							uproxy.ReceiveCoord(this.IPAddress, 6788);
 						} else if (this.controller.getUidmap().get(key).type == 1) {
 							SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-							sproxy.ReceiveCoord(this.IPAddress);
+							sproxy.ReceiveCoord(this.IPAddress, 6788);
 						} else if (this.controller.getUidmap().get(key).type == 2) {
 							FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-							fproxy.ReceiveCoord(this.IPAddress);
+							fproxy.ReceiveCoord(this.IPAddress, 6788);
 						} else if (this.controller.getUidmap().get(key).type == 3) {
 							LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-							lproxy.ReceiveCoord(this.IPAddress);
+							lproxy.ReceiveCoord(this.IPAddress, 6788);
 						}
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
@@ -284,16 +284,17 @@ public class Fridge implements FridgeProto {
 	
 	
 	@Override
-	public int ReceiveCoord(CharSequence server_ip) throws AvroRemoteException {
+	public int ReceiveCoord(CharSequence server_ip, int port) throws AvroRemoteException {
 		this.server_ip_address = server_ip.toString();
 		try {
-			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		this.participant = false;
+		this.isLeader = false;
 		System.out.println("New leader: " + server_ip);
 		return 0;
 	}

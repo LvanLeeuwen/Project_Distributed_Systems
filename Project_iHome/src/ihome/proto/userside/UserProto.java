@@ -8,11 +8,11 @@ package ihome.proto.userside;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public interface UserProto {
-  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"UserProto\",\"namespace\":\"ihome.proto.userside\",\"types\":[],\"messages\":{\"update_controller\":{\"request\":[{\"name\":\"jsonController\",\"type\":\"string\"}],\"response\":\"string\"},\"notify_empty_fridge\":{\"request\":[{\"name\":\"fid\",\"type\":\"int\"}],\"response\":\"int\"},\"Election\":{\"request\":[],\"response\":\"string\"},\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"}],\"response\":\"int\"},\"notify_user_enters\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"}],\"response\":\"int\"},\"notify_user_leaves\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"}],\"response\":\"int\"}}}");
+  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"UserProto\",\"namespace\":\"ihome.proto.userside\",\"types\":[],\"messages\":{\"update_controller\":{\"request\":[{\"name\":\"jsonController\",\"type\":\"string\"}],\"response\":\"string\"},\"notify_empty_fridge\":{\"request\":[{\"name\":\"fid\",\"type\":\"int\"}],\"response\":\"int\"},\"Election\":{\"request\":[],\"response\":\"string\"},\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"}],\"response\":\"int\"},\"notify_user_enters\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"}],\"response\":\"int\"},\"notify_user_leaves\":{\"request\":[{\"name\":\"uid\",\"type\":\"int\"}],\"response\":\"int\"}}}");
   java.lang.CharSequence update_controller(java.lang.CharSequence jsonController) throws org.apache.avro.AvroRemoteException;
   int notify_empty_fridge(int fid) throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence Election() throws org.apache.avro.AvroRemoteException;
-  int ReceiveCoord(java.lang.CharSequence server_ip) throws org.apache.avro.AvroRemoteException;
+  int ReceiveCoord(java.lang.CharSequence server_ip, int port) throws org.apache.avro.AvroRemoteException;
   int notify_user_enters(int uid) throws org.apache.avro.AvroRemoteException;
   int notify_user_leaves(int uid) throws org.apache.avro.AvroRemoteException;
 
@@ -22,7 +22,7 @@ public interface UserProto {
     void update_controller(java.lang.CharSequence jsonController, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
     void notify_empty_fridge(int fid, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
     void Election(org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
-    void ReceiveCoord(java.lang.CharSequence server_ip, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
+    void ReceiveCoord(java.lang.CharSequence server_ip, int port, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
     void notify_user_enters(int uid, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
     void notify_user_leaves(int uid, org.apache.avro.ipc.Callback<java.lang.Integer> callback) throws java.io.IOException;
   }
