@@ -2,7 +2,7 @@
 	"protocol" : "SensorProto",
 	"messages" : {
 		"ReceiveCoord" : {
-			"request" : [{"name" : "server_ip", "type" : "string"}],
+			"request" : [{"name" : "server_ip", "type" : "string"}, {"name" : "port", "type" : "int"}],
 			"response" : "int"
 		}
 
