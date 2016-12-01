@@ -100,8 +100,7 @@ public class Controller implements ServerProto
 			return "{\"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"Error\" : \"[Error] " + e.getMessage();
-		}
-		
+		}	
 	}
 	
 	public void runServer() {
@@ -572,7 +571,7 @@ public class Controller implements ServerProto
 		System.out.println("Alive received from " + uid);
 		if (uidmap.get(uid).type == 0) {
 			this.uidalive.put(uid, true);
-		} else if (uidmap.get(uid).type == 2) {
+		} else {
 			this.fridgeAlive.put(uid, true);
 		}
 		return 0;

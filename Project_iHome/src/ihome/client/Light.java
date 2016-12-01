@@ -3,6 +3,7 @@ package ihome.client;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Scanner;
+import java.util.Timer;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -12,6 +13,8 @@ import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.ipc.specific.SpecificResponder;
 import org.json.JSONObject;
+
+
 
 import ihome.proto.serverside.ServerProto;
 import ihome.server.Controller;
@@ -29,6 +32,11 @@ public class Light implements LightProto {
 	private String state = "off";
 	private String IPAddress;
 	private String server_ip_address;
+	
+	// Alive caller variables
+	private AliveCaller ac;
+	private Timer timer;
+	final static int wtna = Controller.check_alive_interval / 3; 
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -53,6 +61,11 @@ public class Light implements LightProto {
 			ID = json.getInt("UID");
 			name = "light" + ID;
 			System.out.println("name: " + name + " ID: " + ID);
+			// Start timer for I'm alive
+			timer = new Timer();
+			ac = new AliveCaller(this);
+						
+			timer.scheduleAtFixedRate(ac, wtna, wtna);
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
 			e.printStackTrace(System.err);
@@ -137,6 +150,19 @@ public class Light implements LightProto {
 		}
 		System.out.println("New leader: " + server_ip);
 		return 0;
+	}
+	
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
+	
+	public void send_alive(){
+		try {
+			proxy.i_am_alive(this.ID);	
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public static void main(String[] args) {
