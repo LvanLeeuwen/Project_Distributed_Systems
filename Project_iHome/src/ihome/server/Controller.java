@@ -12,6 +12,7 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
@@ -220,6 +221,16 @@ public class Controller implements ServerProto
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
 					CharSequence response = fridgeproxy.update_controller(json.toString());
+				} else if (type == 1 && uidmap.get(id).is_online) {
+					// Send uidmap to sensor
+					Transceiver sensor = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					SensorProto sensorproxy = SpecificRequestor.getClient(SensorProto.class, sensor);
+					CharSequence response = sensorproxy.update_uidmap(jsonuidmap.toString());
+				} else if (type == 3 && uidmap.get(id).is_online) {
+					// Send uidmap to light
+					Transceiver light = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, light);
+					CharSequence response = lightproxy.update_uidmap(jsonuidmap.toString());
 				}
 			}
 		} catch (Exception e) {
@@ -262,18 +273,28 @@ public class Controller implements ServerProto
 				if (id == uid) continue;
 				
 				int type = uidmap.get(id).type;
-				if (type == 0) {
+				if (type == 0 && uidmap.get(id).is_online) {
 					// Send me to user
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
 					return;
-				} else if (type == 2) {
+				} else if (type == 2 && uidmap.get(id).is_online) {
 					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
 					CharSequence response = fridgeproxy.update_controller(json.toString());
 					return;
+				} else if (type == 1 && uidmap.get(id).is_online) {
+					// Send uidmap to sensor
+					Transceiver sensor = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					SensorProto sensorproxy = SpecificRequestor.getClient(SensorProto.class, sensor);
+					CharSequence response = sensorproxy.update_uidmap(jsonuidmap.toString());
+				} else if (type == 3 && uidmap.get(id).is_online) {
+					// Send uidmap to light
+					Transceiver light = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, light);
+					CharSequence response = lightproxy.update_uidmap(jsonuidmap.toString());
 				}
 			}
 		} catch (Exception e) {
@@ -569,7 +590,6 @@ public class Controller implements ServerProto
 	
 	@Override
 	public int i_am_alive(int uid) throws AvroRemoteException {
-		System.out.println("Alive received from " + uid);
 		if (uidmap.get(uid).type == 0) {
 			this.uidalive.put(uid, true);
 		} else if (uidmap.get(uid).type == 2) {
@@ -728,6 +748,23 @@ public class Controller implements ServerProto
 			}
 		}
 		return out;
+	}
+	
+	public Integer getNextID(int currentID) {
+		List<Integer> keys = new ArrayList(this.uidmap.keySet());
+		int nextID = 0;
+		for (int i = 0; i < keys.size(); i++) {
+			if (keys.get(i) == currentID && i != keys.size() - 1) {
+				nextID = i + 1;
+			} else if (keys.get(i) == currentID && i == keys.size() - 1) {
+				nextID = 0;
+			}
+		}
+		return nextID;
+	}
+	
+	public CharSequence getIP(int id) {
+		return this.uidmap.get(id).IPAddress;
 	}
 	
 	public Map<Integer, Device> getUidmap(){

@@ -21,13 +21,17 @@
 			"request" : [{"name" : "item", "type" : "string"}],
 			"response" : "string"
 		},
-		"Election" : {
-			"request" : [],
-			"response" : "string"
-		},
 		"ReceiveCoord" : {
 			"request" : [{"name" : "server_ip", "type" : "string"}, {"name" : "port", "type" : "int"}],
 			"response" : "int"
+		},
+		"receiveElection" : {
+			"request" : [{"name" : "receivedID", "type" : "int"}],
+			"response" : "string"
+		},
+		"receiveElected" : {
+			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}],
+			"response" : "string"
 		}
 
 	}

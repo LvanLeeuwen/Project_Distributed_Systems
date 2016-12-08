@@ -131,12 +131,7 @@ public class Fridge implements FridgeProto {
 			proxy.i_am_alive(this.ID);
 		} catch (AvroRemoteException e) {
 			if (!this.participant) {
-				try {
-					this.Election();
-				} catch (AvroRemoteException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+				this.startElection();
 			}
 			/*
 			System.err.println("[error] failed to send I'm alive");
@@ -148,140 +143,152 @@ public class Fridge implements FridgeProto {
 	/**************
 	 ** ELECTION **
 	 **************/
-	@Override
-	public CharSequence Election() throws AvroRemoteException{
-		
-		if(isLeader || participant){
-			return " ";
+	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
+		try {
+			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
+			if(this.controller.getUidmap().get(nextID).type == 0){
+				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
+				uproxy.receiveElection(receivedID);
+			} else if (this.controller.getUidmap().get(nextID).type == 1){
+				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
+				sproxy.receiveElection(receivedID);
+			} else if (this.controller.getUidmap().get(nextID).type == 2){
+				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
+				fproxy.receiveElection(receivedID);
+			} else if (this.controller.getUidmap().get(nextID).type == 3){
+				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
+				lproxy.receiveElection(receivedID);
+			}
+			return true;
+		} catch (IOException e) {
+			return false;
 		}
-		this.participant = true;
-		Map<Integer, CharSequence>candidates = this.controller.getPossibleParticipants();
-		Map<Integer, CharSequence> L = new HashMap<Integer, CharSequence>();
-		Map<Integer, CharSequence> S = new HashMap<Integer, CharSequence>();
-		
-		//init L and S
-		for (int key : candidates.keySet()){
-			if( key == this.ID)
-				continue;
-			else if(key > this.ID)
-				L.put(key, candidates.get(key));
-			else if(key < this.ID)
-				S.put(key, candidates.get(key));
-		}
-		if(L.size() <= 0){
-			
-			
-			this.controller.runServer();
-			
-			// Make me the server
-			try {
-				if(!isLeader){
-					fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-					proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-					isLeader = true;
-				}
-				
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		
-			// send Coordinator
-			for (int key : S.keySet()) {
-				try {
-					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(S.get(key).toString(), 6790 + key));
-					if (this.controller.getUidmap().get(key).type == 0) {
-						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-						uproxy.ReceiveCoord(this.IPAddress, 6788);
-					} else if (this.controller.getUidmap().get(key).type == 1) {
-						SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-						sproxy.ReceiveCoord(this.IPAddress, 6788);
-					} else if (this.controller.getUidmap().get(key).type == 2) {
-						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-						fproxy.ReceiveCoord(this.IPAddress, 6788);
-					} else if (this.controller.getUidmap().get(key).type == 3) {
-						LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-						lproxy.ReceiveCoord(this.IPAddress, 6788);
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			
-			this.participant = false;
-			
-			return this.server_ip_address;
-			
-		} else{
-			int number_of_failures = 0;
-			
-			for(int key : L.keySet()){
-				try {
-					Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(L.get(key).toString(), 6790 + key));
-					if(this.controller.getUidmap().get(key).type == 0){
-						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-						return uproxy.Election();
-					} else{
-						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-						return fproxy.Election();
-					}
-				} catch (IOException e) {
-					number_of_failures++;
-				}
-			}
-			
-			if(number_of_failures == L.size()){
-				
-				this.controller.runServer();
-				
-				// Make me the server
-				try {
-					if(!isLeader){
-						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-						isLeader = true;
-					}
-					
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			
-				// send Coordinator
-				for (int key : S.keySet()) {
-					try {
-						Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(S.get(key).toString(), 6790 + key));
-						if (this.controller.getUidmap().get(key).type == 0) {
-							UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-							uproxy.ReceiveCoord(this.IPAddress, 6788);
-						} else if (this.controller.getUidmap().get(key).type == 1) {
-							SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-							sproxy.ReceiveCoord(this.IPAddress, 6788);
-						} else if (this.controller.getUidmap().get(key).type == 2) {
-							FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-							fproxy.ReceiveCoord(this.IPAddress, 6788);
-						} else if (this.controller.getUidmap().get(key).type == 3) {
-							LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-							lproxy.ReceiveCoord(this.IPAddress, 6788);
-						}
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
-			}
-		}
-		
-		
-		
-		this.participant = false;
-		return " ";
-		
 	}
 	
+	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port) {
+		try {
+			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
+			if(this.controller.getUidmap().get(nextID).type == 0){
+				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
+				uproxy.receiveElected(serverIP, port);
+			} else if (this.controller.getUidmap().get(nextID).type == 1){
+				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
+				sproxy.receiveElected(serverIP, port);
+			} else if (this.controller.getUidmap().get(nextID).type == 2){
+				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
+				fproxy.receiveElected(serverIP, port);
+			} else if (this.controller.getUidmap().get(nextID).type == 3){
+				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
+				lproxy.receiveElected(serverIP, port);
+			}
+			return true;
+		} catch (IOException e) {
+			return false;
+		}
+	}
 	
+	public CharSequence startElection() {
+		this.participant = true;
+		
+		int nextID = this.controller.getNextID(this.ID);
+		if (nextID != this.ID) {
+			CharSequence nextIP = this.controller.getIP(nextID);
+			while (!this.sendElection(nextID, nextIP, this.ID)) {
+				nextID = this.controller.getNextID(nextID);
+				if (nextID == this.ID) {
+					// Start my server
+					this.controller.runServer();
+					try {
+						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
+						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					this.participant = false;
+					return null;
+				}
+				nextIP = this.controller.getIP(nextID);
+			}
+		} else {
+			// Start my server
+			this.controller.runServer();
+			try {
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			this.participant = false;
+		}
+		return null;
+	}
 	
+	@Override
+	public CharSequence receiveElection(int receivedID) throws AvroRemoteException {
+		if (receivedID > this.ID) {
+			// Forward the election message
+			this.participant = true;
+			int nextID = this.controller.getNextID(this.ID);
+			CharSequence nextIP = this.controller.getIP(nextID);
+			while (!this.sendElection(nextID, nextIP, receivedID)) {
+				nextID = this.controller.getNextID(nextID);
+				nextIP = this.controller.getIP(nextID);
+			}
+		} else if (receivedID < this.ID && !this.participant) {
+			// Send my ID
+			this.participant = true;
+			int nextID = this.controller.getNextID(this.ID);
+			CharSequence nextIP = this.controller.getIP(nextID);
+			while (!this.sendElection(nextID, nextIP, this.ID)) {
+				nextID = this.controller.getNextID(nextID);
+				nextIP = this.controller.getIP(nextID);
+			}
+		} else if (receivedID < this.ID && this.participant) {
+			// Discard election message
+		} else if (receivedID == this.ID) {
+			// I'm the leader
+			this.participant = false;
+			// Start my server
+			this.controller.runServer();
+			try {
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			int nextID = this.controller.getNextID(this.ID);
+			CharSequence nextIP = this.controller.getIP(nextID);
+			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788)) {
+				nextID = this.controller.getNextID(nextID);
+				nextIP = this.controller.getIP(nextID);
+			}
+		}
+		return " ";
+	}
+	
+	@Override
+	public CharSequence receiveElected(CharSequence serverIP, int port) throws AvroRemoteException {
+		if (this.participant) {
+			this.participant = false;
+			this.server_ip_address = serverIP.toString();
+			try {
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
+				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			// Forward elected message
+			int nextID = this.controller.getNextID(this.ID);
+			CharSequence nextIP = this.controller.getIP(nextID);
+			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788)) {
+				nextID = this.controller.getNextID(nextID);
+				nextIP = this.controller.getIP(nextID);
+			}
+		} else {
+			// Discard. Election is over.
+		}
+		return " ";
+	}
 	
 	@Override
 	public int ReceiveCoord(CharSequence server_ip, int port) throws AvroRemoteException {

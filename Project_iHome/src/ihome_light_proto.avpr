@@ -20,6 +20,18 @@
 		"turn_back" : {
 			"request" : [],
 			"response" : "int"
+		},
+		"receiveElection" : {
+			"request" : [{"name" : "receivedID", "type" : "int"}],
+			"response" : "string"
+		},
+		"receiveElected" : {
+			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}],
+			"response" : "string"
+		},
+		"update_uidmap" : {
+			"request" : [{"name" : "json_uidmap", "type" : "string"}],
+			"response" : "string"
 		}
 	}
 }

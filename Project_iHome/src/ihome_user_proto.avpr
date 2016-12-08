@@ -9,8 +9,12 @@
 			"request" : [{"name" : "fid", "type" : "int"}],
 			"response" : "int"
 		},
-		"Election" : {
-			"request" : [],
+		"receiveElection" : {
+			"request" : [{"name" : "receivedID", "type" : "int"}],
+			"response" : "string"
+		},
+		"receiveElected" : {
+			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}],
 			"response" : "string"
 		},
 		"ReceiveCoord" : {
