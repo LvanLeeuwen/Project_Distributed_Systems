@@ -407,14 +407,24 @@ public class Controller implements ServerProto
 	
 	@Override
 	public CharSequence get_all_devices() throws AvroRemoteException {
-		CharSequence inSession = "Currently in session("+ this.uidmap.size()+ "):\n";
+		String out = "";
+		out += "Currently in session("+ this.uidmap.size()+ "):\n";
+		out += "id / is online / device type \n";
 		for(int id : uidmap.keySet())
 		{
-			int type = uidmap.get(id).type;
-			inSession = inSession.toString() + id + " " + type + "\n";
+			String type = "";
+			if(uidmap.get(id).type == 0)
+				type = "User";
+			else if(uidmap.get(id).type == 1)
+				type = "Sensor";
+			else if(uidmap.get(id).type == 2)
+				type = "Fridge";
+			else if(uidmap.get(id).type == 3)
+				type = "Light";
+			out += id + " " +  Boolean.toString(uidmap.get(id).is_online) + " " + type + "\n";
 		}
-		inSession = inSession.toString() + "\n";
-		return inSession;
+		out += "\n";
+		return out;
 	}
 	
 	
@@ -488,20 +498,24 @@ public class Controller implements ServerProto
 		return null;
 	}
 
-	
-	
 	public void printInSession(){
 		System.out.println("Currently in session("+ this.uidmap.size()+ "):");
+		System.out.println("id / is online / device type ");
 		for(int id : uidmap.keySet())
 		{
-			System.out.println(id + " " +  Boolean.toString(uidmap.get(id).is_online) + " " + uidmap.get(id).type +" "+ uidmap.get(id).has_local_connect);
+			String type = "";
+			if(uidmap.get(id).type == 0)
+				type = "User";
+			else if(uidmap.get(id).type == 1)
+				type = "Sensor";
+			else if(uidmap.get(id).type == 2)
+				type = "Fridge";
+			else if(uidmap.get(id).type == 3)
+				type = "Light";
+			System.out.println(id + " " +  Boolean.toString(uidmap.get(id).is_online) + " " + type);
 		}
 		System.out.print("\n");
 	}
-	
-	
-
-
 	
 	/*************************
 	 ** LIGHT FUNCTIONALITY **
@@ -566,7 +580,7 @@ public class Controller implements ServerProto
 	@Override
 	public CharSequence switch_state_light(int uid) throws AvroRemoteException {
 		Device light = uidmap.get(uid);
-		if (light.type != 3) {
+		if (light == null || light.type != 3) {
 			return "{\"Switched\" : false, \"Error\" : \"[Error] light_id not found in current session.\"}";
 		}
 		try {
@@ -627,11 +641,9 @@ public class Controller implements ServerProto
 		
 		//System.out.println(nr_users);
 		if(nr_users == 0 && old_nr_users != 0){
-			System.out.println("turn off all lights sinds no users");
 			this.turn_of_lights();
 		}
 		else if (nr_users != 0 && old_nr_users == 0){
-			System.out.println("return lights to old state");
 			this.turn_back_lights();
 		}
 		old_nr_users = nr_users;
@@ -645,7 +657,7 @@ public class Controller implements ServerProto
 	@Override
 	public CharSequence get_fridge_contents(int uid) throws AvroRemoteException {
 		Device fridge = uidmap.get(uid);
-		if (fridge.type != 2) {
+		if (fridge == null || fridge.type != 2) {
 			return "{\"Contents\" : NULL, \"Error\" : \"[Error] fridge_id not found in current session.\"}";
 		}
 		try {
@@ -831,7 +843,16 @@ public class Controller implements ServerProto
 		String server_ip = reader.nextLine();
 		Controller controller = new Controller(server_ip, true);
 		controller.runServer();
-
+		
+		System.out.println("Do you want to run silent(1) mode of interface mode(2)");
+		int mode = reader.nextInt();
+		if(mode == 1){
+			System.out.println("Server started...");
+			while(true){
+				int a = 0;
+			}
+		}
+		else if(mode == 2){
 		while(true){
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get in-session list");
@@ -841,21 +862,14 @@ public class Controller implements ServerProto
 			System.out.println("5) Get current en removed contents fridge");
 			System.out.println("6) Get temperature list");
 			System.out.println("7) Get current temperature");
-			System.out.println("8) send controller");
+			
+	//		System.out.println("8) send controller");
 			
 			int in = reader.nextInt();
 			if(in == 1){
 				
 				controller.printInSession();
-				/*try {
-					controller.printInSession();
-					//System.out.println(controller.get_all_devices());
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}*/
 			} else if(in ==2){
-				
 				try {
 					System.out.println(controller.get_lights_state());
 				} catch (AvroRemoteException e) {
@@ -906,8 +920,7 @@ public class Controller implements ServerProto
 				break;
 			}
 		}
-
-		//controller.get_light_state(0);
 		controller.stopServer();
 	}	
+	}
 }
