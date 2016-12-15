@@ -68,8 +68,13 @@ public class Light implements LightProto {
 	 **************************/
 	public void connect_to_server() {
 		try {
-			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
-			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
+			try {
+				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
+			} catch (Exception e) {
+				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
+			}
 			
 			CharSequence response = proxy.connect(3, IPAddress);
 			JSONObject json = new JSONObject(response.toString());

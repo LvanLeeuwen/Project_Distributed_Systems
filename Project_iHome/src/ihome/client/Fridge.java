@@ -67,9 +67,13 @@ public class Fridge implements FridgeProto {
 	 **************************/
 	public void connect_to_server() {
 		try {
-			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
-			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-			
+			try {
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
+			} catch (AvroRemoteException e) {
+				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
+			}
 			CharSequence response = proxy.connect(2, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();

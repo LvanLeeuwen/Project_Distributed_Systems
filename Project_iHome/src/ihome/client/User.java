@@ -63,8 +63,13 @@ public class User implements UserProto {
 	 **************************/
 	public void connect_to_server() {
 		try {
-			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
-			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			try {
+				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			} catch (AvroRemoteException e) {
+				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			}
 			
 			CharSequence response = proxy.connect(0, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
@@ -385,6 +390,7 @@ public class User implements UserProto {
 	 ************************/
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
+		System.out.println("update_controller user");
 		controller.updateController(jsonController);
 		return "";
 	}

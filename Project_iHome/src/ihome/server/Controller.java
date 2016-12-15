@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.Timer;
 
 import org.json.*;
@@ -211,7 +212,8 @@ public class Controller implements ServerProto
 			json.put("uidmap", jsonuidmap);
 			
 			// Send json
-			for (int id : uidmap.keySet()) {
+			for (int id : this.uidmap.keySet()) {
+				System.out.println(id);
 				int type = uidmap.get(id).type;
 				if (type == 0 && uidmap.get(id).is_online) {
 					// Send me to user
