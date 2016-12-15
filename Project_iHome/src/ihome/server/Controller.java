@@ -2,7 +2,6 @@ package ihome.server;
 
 import ihome.proto.sensorside.SensorProto;
 import ihome.proto.serverside.ServerProto;
-import ihome.client.AliveCaller;
 import ihome.proto.lightside.LightProto;
 import ihome.proto.fridgeside.FridgeProto;
 import ihome.proto.userside.UserProto;
@@ -44,12 +43,12 @@ public class Controller implements ServerProto
 	// Alive variables
 	private Timer timer;
 	private AliveResponder ar;
+	public static final int check_alive_interval = 1000;
 	
 	// Ping server variables
 	private Timer pingTimer;
 	private PingServer ps;
 	
-	public static final int check_alive_interval = 1000;
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -90,7 +89,6 @@ public class Controller implements ServerProto
 
 	@Override
 	public CharSequence disconnect(int uid) throws AvroRemoteException {
-		System.out.println("disconnect");
 		if(!uidmap.containsKey(uid))
 		{
 			return "{\"Error\" : \"[Error] uid not found in current session.\"}";
@@ -121,8 +119,7 @@ public class Controller implements ServerProto
 				pingTimer.scheduleAtFixedRate(ps, check_alive_interval, check_alive_interval);
 			}
 		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to start server");
 			System.exit(1);
 		}
 		server.start();
@@ -141,12 +138,14 @@ public class Controller implements ServerProto
 		try {
 			Transceiver pingedServer = new SaslSocketTransceiver(new InetSocketAddress(6789));
 			ServerProto serverproxy = SpecificRequestor.getClient(ServerProto.class, pingedServer);
+			
 			// Original server back online. 
 			this.sendControllerToController();
 			// Let new server send its coordinates
 			serverproxy.sendCoord();
 			// Stop current server
 			this.stopServer();
+			pingedServer.close();
 			
 		} catch (Exception e) {
 			// Continue pinging
@@ -155,7 +154,6 @@ public class Controller implements ServerProto
 	
 	@Override
 	public CharSequence sendCoord() throws AvroRemoteException {
-		System.out.println("sendCoord");
 		for (int key : uidmap.keySet()) {
 			try {
 				Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(uidmap.get(key).IPAddress.toString(), 6790 + key));
@@ -172,13 +170,18 @@ public class Controller implements ServerProto
 					LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, trans);
 					lproxy.ReceiveCoord(this.IPAddress, 6789);
 				}
+				trans.close();
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to send coordinates");
 			}
 		}
 		return "";
 	}
 	
+	
+	/*****************
+	 ** REPLICATION ** 
+	 *****************/
 	@Override
 	public int sendController() throws AvroRemoteException {
 		try {
@@ -215,25 +218,29 @@ public class Controller implements ServerProto
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
+					user.close();
 				} else if (type == 2 && uidmap.get(id).is_online) {
 					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
 					CharSequence response = fridgeproxy.update_controller(json.toString());
+					fridge.close();
 				} else if (type == 1 && uidmap.get(id).is_online) {
 					// Send uidmap to sensor
 					Transceiver sensor = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					SensorProto sensorproxy = SpecificRequestor.getClient(SensorProto.class, sensor);
 					CharSequence response = sensorproxy.update_uidmap(jsonuidmap.toString());
+					sensor.close();
 				} else if (type == 3 && uidmap.get(id).is_online) {
 					// Send uidmap to light
 					Transceiver light = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, light);
 					CharSequence response = lightproxy.update_uidmap(jsonuidmap.toString());
+					light.close();
 				}
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to send controller");
 			return 0;
 		}
 		return 0;
@@ -277,27 +284,31 @@ public class Controller implements ServerProto
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					CharSequence response = userproxy.update_controller(json.toString());
+					user.close();
 					return;
 				} else if (type == 2 && uidmap.get(id).is_online) {
 					// Send me to fridge
 					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
 					CharSequence response = fridgeproxy.update_controller(json.toString());
+					fridge.close();
 					return;
 				} else if (type == 1 && uidmap.get(id).is_online) {
 					// Send uidmap to sensor
 					Transceiver sensor = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					SensorProto sensorproxy = SpecificRequestor.getClient(SensorProto.class, sensor);
 					CharSequence response = sensorproxy.update_uidmap(jsonuidmap.toString());
+					sensor.close();
 				} else if (type == 3 && uidmap.get(id).is_online) {
 					// Send uidmap to light
 					Transceiver light = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, light);
 					CharSequence response = lightproxy.update_uidmap(jsonuidmap.toString());
+					light.close();
 				}
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to send controller");
 			return;
 		}
 		return;
@@ -334,8 +345,9 @@ public class Controller implements ServerProto
 			Transceiver pingedServer = new SaslSocketTransceiver(new InetSocketAddress(6789));
 			ServerProto serverproxy = SpecificRequestor.getClient(ServerProto.class, pingedServer);
 			CharSequence response = serverproxy.updateController(json.toString());
+			pingedServer.close();
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to send controller");
 			return;
 		}
 		return;
@@ -396,11 +408,13 @@ public class Controller implements ServerProto
 				uidalive.put(id, alive);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to update controller");
 			return "updateController" + e.toString();
 		}	
 		return "";
 	}
+	
+	
 	/**************************
 	 ** DEVICE FUNCTIONALITY **
 	 **************************/
@@ -533,12 +547,13 @@ public class Controller implements ServerProto
 					LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
 					CharSequence state = proxy.send_state();
 					lights = lights.toString() + key + " " + state + "\n";
+					trans.close();
 				}
 			}
 			return lights;
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to get lights state");
+			
 		}
 		return null;
 	}
@@ -551,11 +566,10 @@ public class Controller implements ServerProto
 					trans = new SaslSocketTransceiver(new InetSocketAddress(6790+key));
 					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, trans);
 					lightproxy.turn_off();
+					trans.close();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					System.err.println("[Error] Failed to turn of lights");
 				}
-				
 			}
 		}
 	}
@@ -568,11 +582,10 @@ public class Controller implements ServerProto
 					trans = new SaslSocketTransceiver(new InetSocketAddress(6790+key));
 					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, trans);
 					lightproxy.turn_back();
+					trans.close();
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					System.err.println("[Error] Failed to turn lights back on");
 				}
-				
 			}
 		}
 	}
@@ -588,10 +601,10 @@ public class Controller implements ServerProto
 			LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
 			CharSequence state = proxy.switch_state();
 			this.sendController();
+			trans.close();
 			return "{\"Switched\" : true, \"Error\" : NULL}";
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to switch light state");
 		}
 		return null;
 	}
@@ -639,7 +652,6 @@ public class Controller implements ServerProto
 			}
 		}
 		
-		//System.out.println(nr_users);
 		if(nr_users == 0 && old_nr_users != 0){
 			this.turn_of_lights();
 		}
@@ -648,7 +660,6 @@ public class Controller implements ServerProto
 		}
 		old_nr_users = nr_users;
 	}
-	
 	
 
 	/*********************
@@ -664,10 +675,10 @@ public class Controller implements ServerProto
 			Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(6790+uid));
 			FridgeProto proxy = SpecificRequestor.getClient(FridgeProto.class, trans);
 			CharSequence contents = proxy.send_current_items();
+			trans.close();
 			return "{\"Contents\" : " + contents + ", \"Error\" : NULL}";
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to connect to fridge");
 		}
 		return null;
 	}
@@ -683,9 +694,9 @@ public class Controller implements ServerProto
 			FridgeProto proxy = SpecificRequestor.getClient(FridgeProto.class, trans);
 			CharSequence contents = proxy.send_all_items();
 			System.out.println(contents);
+			trans.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to connect to fridge");
 		}
 	}
 	
@@ -736,7 +747,7 @@ public class Controller implements ServerProto
 						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 						int response = userproxy.notify_empty_fridge(uid);
-						
+						user.close();
 					} 
 				}
 			}
@@ -746,6 +757,7 @@ public class Controller implements ServerProto
 		}
 		return 0;
 	}
+	
 	
 	/*******************
 	 * LEADER ELECTION *
@@ -782,6 +794,7 @@ public class Controller implements ServerProto
 		return this.uidmap;
 	}
 	
+	
 	/**********************
 	 * USER ENTERS/LEAVES *
 	 **********************/
@@ -800,11 +813,12 @@ public class Controller implements ServerProto
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					int response = userproxy.notify_user_enters(uid);
+					user.close();
 				}
 			}
 			return "{\"Error\" : NULL}";
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to let user enter");
 		}
 		return null;
 	}
@@ -817,18 +831,19 @@ public class Controller implements ServerProto
 			this.uidalive.put(uid, false);
 			this.uidmap.get(uid).is_online = false;
 			this.sendController();
-			// Send message to all other users
+			
 			// Send message to all other users
 			for (int id : uidmap.keySet()) {
 				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
 					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					int response = userproxy.notify_user_leaves(uid);
+					user.close();
 				}
 			}
 			return "{\"Error\" : NULL}";
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to let user leave");
 		}
 		return null;
 	}
@@ -920,6 +935,8 @@ public class Controller implements ServerProto
 				break;
 			}
 		}
+		reader.close();
+		//controller.get_light_state(0);
 		controller.stopServer();
 	}	
 	}

@@ -4,8 +4,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
 
@@ -71,22 +69,21 @@ public class Fridge implements FridgeProto {
 		try {
 			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-			System.out.println("Connected to server");
+			
 			CharSequence response = proxy.connect(2, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
+			
 			ID = json.getInt("UID");
 			name = "fridge" + ID;
-			System.out.println("name: " + name + " ID: " + ID);
+			System.out.println("Connected to server with name " + name + " and ID: " + ID);
 			
 			// Start timer for I'm alive
 			timer = new Timer();
 			ac = new AliveCaller(this);
-			
 			timer.scheduleAtFixedRate(ac, wtna, wtna);
 		} catch (Exception e) {
-			System.err.println("[error] failed to connect to server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to connect to server");
 			System.exit(1);
 		}
 	}
@@ -97,8 +94,7 @@ public class Fridge implements FridgeProto {
 			server = new SaslSocketServer(new SpecificResponder(FridgeProto.class,
 					this), new InetSocketAddress(IPAddress, 6790+ID));
 		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to start server");
 			System.exit(1);
 
 		}
@@ -109,7 +105,6 @@ public class Fridge implements FridgeProto {
 		try {
 			server.join();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -118,10 +113,10 @@ public class Fridge implements FridgeProto {
 		try {
 			proxy.sendController();
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to pull from server");
 		}
 	}
+	
 	
 	/*************************
 	 ** ALIVE FUNCTIONALITY **
@@ -133,12 +128,9 @@ public class Fridge implements FridgeProto {
 			if (!this.participant) {
 				this.startElection();
 			}
-			/*
-			System.err.println("[error] failed to send I'm alive");
-			e.printStackTrace();
-			*/
 		}
 	}
+	
 	
 	/**************
 	 ** ELECTION **
@@ -159,6 +151,7 @@ public class Fridge implements FridgeProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElection(receivedID);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -181,6 +174,7 @@ public class Fridge implements FridgeProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElected(serverIP, port);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -202,7 +196,7 @@ public class Fridge implements FridgeProto {
 						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
 					} catch (IOException e) {
-						e.printStackTrace();
+						System.err.println("[Error] Failed to start server");
 					}
 					this.participant = false;
 					return null;
@@ -216,7 +210,7 @@ public class Fridge implements FridgeProto {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
 			this.participant = false;
 		}
@@ -254,7 +248,7 @@ public class Fridge implements FridgeProto {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
 			int nextID = this.controller.getNextID(this.ID);
 			CharSequence nextIP = this.controller.getIP(nextID);
@@ -275,7 +269,7 @@ public class Fridge implements FridgeProto {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
 			// Forward elected message
 			int nextID = this.controller.getNextID(this.ID);
@@ -297,14 +291,13 @@ public class Fridge implements FridgeProto {
 			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to start server");
 		}
 		this.participant = false;
 		this.isLeader = false;
-		System.out.println("New leader: " + server_ip);
 		return 0;
 	}
+	
 	
 	/**************************
 	 ** FRIDGE FUNCTIONALITY **
@@ -316,6 +309,7 @@ public class Fridge implements FridgeProto {
 	public void close() {
 		opened = false;
 	}
+	
 	
 	/**************************
 	 ** ITEMS FUNCTIONALITY  **
@@ -362,6 +356,7 @@ public class Fridge implements FridgeProto {
 		return Arrays.toString(allItems.toArray());
 	}
 	
+	
 	/******************************
 	 ** CONTROLLER FUNCTIONALITY **
 	 ******************************/
@@ -370,6 +365,7 @@ public class Fridge implements FridgeProto {
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
 		return controller.updateController(jsonController);
 	}
+	
 	
 	/**************************
 	 ** MAIN FUNCTIONALITY   **
@@ -419,5 +415,6 @@ public class Fridge implements FridgeProto {
 				break;
 			}
 		}
+		reader.close();
 	}
 }

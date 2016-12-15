@@ -1,17 +1,9 @@
 package ihome.client;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
-import java.util.TimerTask;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -73,23 +65,21 @@ public class User implements UserProto {
 		try {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
-			System.out.println("Connected to server");
+			
 			CharSequence response = proxy.connect(0, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
+			
 			ID = json.getInt("UID");
 			name = "user" + ID;
-			System.out.println("username: " + name + " ID: " + ID + " Entered the house");
+			System.out.println("Connected to server with name " + name + " and ID " + ID);
 			
 			// Start timer for I'm alive
 			timer = new Timer();
 			ac = new AliveCaller(this);
-			
 			timer.scheduleAtFixedRate(ac, wtna, wtna);
-	
 		} catch (Exception e) {
-			System.err.println("[error] failed to connect to server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to connect to server");
 			System.exit(1);
 		}
 	}
@@ -100,10 +90,8 @@ public class User implements UserProto {
 			server = new SaslSocketServer(new SpecificResponder(UserProto.class,
 					this), new InetSocketAddress(IPAddress, 6790+ID));
 		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to start server");
 			System.exit(1);
-
 		}
 		server.start();
 	}
@@ -112,7 +100,6 @@ public class User implements UserProto {
 		try {
 			server.join();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -121,8 +108,7 @@ public class User implements UserProto {
 		try {
 			proxy.sendController();
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to pull from server");
 		}
 	}
 	
@@ -138,14 +124,6 @@ public class User implements UserProto {
 		} catch (AvroRemoteException e) {
 			if (!this.participant) {
 				this.startElection();
-				/*
-				try {
-					this.Election();
-				} catch (AvroRemoteException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				*/
 			}
 		}
 	}
@@ -170,6 +148,7 @@ public class User implements UserProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElection(receivedID);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -192,6 +171,7 @@ public class User implements UserProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElected(serverIP, port);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -213,7 +193,7 @@ public class User implements UserProto {
 						user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
 					} catch (IOException e) {
-						e.printStackTrace();
+						System.err.println("[Error] Failed to start server");
 					}
 					this.participant = false;
 					return null;
@@ -227,7 +207,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
 			this.participant = false;
 		}
@@ -265,7 +245,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
 			int nextID = this.controller.getNextID(this.ID);
 			CharSequence nextIP = this.controller.getIP(nextID);
@@ -286,7 +266,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
 			} catch (IOException e) {
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
 			// Forward elected message
 			int nextID = this.controller.getNextID(this.ID);
@@ -307,16 +287,14 @@ public class User implements UserProto {
 		try {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
-			
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to start server");
 		}
 		this.participant = false;
 		this.isLeader = false;
-		System.out.println("New leader: " + server_ip);
 		return 0;
 	}
+	
 	
 	/********************
 	 ** FRIDGE CONNECT **
@@ -325,13 +303,12 @@ public class User implements UserProto {
 	private int getPort(int uid){
 		try {
 			CharSequence response = proxy.get_fridge_port(this.ID, uid);
-			System.out.println(response);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("socket"))
 				return json.getInt("socket");
 			else{
 				try{
-					System.out.println(json.getString("Error"));
+					System.out.println("[Error] " + json.getString("Error"));
 				}
 				catch(Exception e){
 					
@@ -339,8 +316,7 @@ public class User implements UserProto {
 				return -1;
 			}
 		} catch (AvroRemoteException | JSONException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to get port");
 		}
 		return -1;
 	}
@@ -356,12 +332,11 @@ public class User implements UserProto {
 		}
 		
 		try {
-			System.out.println(port);
 			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(port));
 			FridgeProto fridgeproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, fridge);
 			
+			Scanner reader = new Scanner(System.in);
 			while(true){
-				Scanner reader = new Scanner(System.in);
 				System.out.println("What do you want to do?");
 				System.out.println("1) Add item to fridge(" + fridgeid + ")");
 				System.out.println("2) remove item from fridge(" + fridgeid+ ")");
@@ -382,29 +357,28 @@ public class User implements UserProto {
 					System.out.println(fridgeproxy.send_current_items());
 				} else if(in == 4){
 					break;
-				}
-				
+				}	
 			}
-			
+			reader.close();			
 			proxy.release_fridge(fridgeid);
+			fridge.close();
 				
 		} catch (IOException e) {
 			try {
 				proxy.report_offline(fridgeid);
 			} catch (AvroRemoteException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+				System.err.println("[Error] Failed to report fridge offline");
 			}
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to connect to fridge");
 		}
 	}
 	
 	@Override
 	public int notify_empty_fridge(int fid) throws AvroRemoteException {
-		System.out.println("Fridge " + fid + " is empty!");
+		System.out.println("Fridge with ID " + fid + " is empty!");
 		return 0;
 	}
+	
 	
 	/************************
 	 * CONTROLLER FUNCTIONS *
@@ -415,7 +389,7 @@ public class User implements UserProto {
 		return "";
 	}
 	
-	
+
 	/*********************
 	 * ENTER/LEAVE HOUSE *
 	 *********************/
@@ -428,8 +402,7 @@ public class User implements UserProto {
 			proxy.user_enters(this.ID);
 			System.out.println("I entered the house!");
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to let user enter");
 		}
 		return;
 	}
@@ -443,8 +416,7 @@ public class User implements UserProto {
 			proxy.user_leaves(this.ID);
 			System.out.println("I left the house!");
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to let user leave");
 		}
 		return;
 	}
@@ -459,6 +431,7 @@ public class User implements UserProto {
 		System.out.println("User " + uid + " left the house!");
 		return 0;
 	}
+	
 	
 	/**********
 	 ** MAIN **
@@ -573,6 +546,7 @@ public class User implements UserProto {
 			
 			
 		}
+		reader.close();
 	}
 }
 	
