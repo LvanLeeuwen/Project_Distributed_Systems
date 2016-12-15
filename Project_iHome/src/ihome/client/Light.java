@@ -17,7 +17,6 @@ import org.apache.avro.ipc.Server;
 import org.apache.avro.ipc.Transceiver;
 import org.apache.avro.ipc.specific.SpecificRequestor;
 import org.apache.avro.ipc.specific.SpecificResponder;
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import ihome.proto.sensorside.SensorProto;
@@ -30,6 +29,7 @@ import ihome.proto.lightside.LightProto;
 
 public class Light implements LightProto {
 	
+	// Server variables
 	private Server server = null;
 	private Transceiver light;
 	private ServerProto proxy;
@@ -52,6 +52,7 @@ public class Light implements LightProto {
 	private Timer timer;
 	final static int wtna = Controller.check_alive_interval / 3; 
 	
+	
 	/******************
 	 ** CONSTRUCTORS **
 	 ******************/
@@ -61,6 +62,7 @@ public class Light implements LightProto {
 		server_ip_address = server_ip;
 	}
 	
+	
 	/**************************
 	 ** SERVER FUNCTIONALITY **
 	 **************************/
@@ -68,24 +70,60 @@ public class Light implements LightProto {
 		try {
 			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
-			System.out.println("Connected to server");
+			
 			CharSequence response = proxy.connect(3, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
+			
 			if (!json.isNull("Error")) throw new Exception();
+			
 			ID = json.getInt("UID");
 			name = "light" + ID;
-			System.out.println("name: " + name + " ID: " + ID);
+			
+			System.out.println("Connected to server with name " + name + " and ID " + ID);
+			
 			// Start timer for I'm alive
 			timer = new Timer();
 			ac = new AliveCaller(this);
-						
 			timer.scheduleAtFixedRate(ac, wtna, wtna);
+			
 		} catch (Exception e) {
-			System.err.println("[error] failed to connect to server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to connect to server");
 			System.exit(1);
 		}
 	}
+	
+	public void runServer() {
+		try
+		{
+			server = new SaslSocketServer(new SpecificResponder(LightProto.class,
+					this), new InetSocketAddress(IPAddress, 6790+ID));
+		}catch (IOException e){
+			System.err.println("[Error] Failed to start server");
+			System.exit(1);
+		}
+		server.start();
+	}
+	
+	public void stopServer() {
+		try {
+			server.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void pullServer() {
+		try {
+			proxy.sendController();
+		} catch (AvroRemoteException e) {
+			System.err.println("[Error] Failed to pull from server");
+		}
+	}
+	
+	
+	/*************************
+	 ** LIGHT FUNCTIONALITY **
+	 *************************/
 	
 	@Override
 	public CharSequence send_state() throws AvroRemoteException {
@@ -96,10 +134,10 @@ public class Light implements LightProto {
 	public CharSequence switch_state() throws AvroRemoteException {
 		if (state == "on") {
 			state = "off";
-			System.out.println("Light " + name + " with ID " + ID + " is switched off.");
+			System.out.println("Light with name " + name + " and ID " + ID + " is switched off.");
 		} else {
 			state = "on";
-			System.out.println("Light " + name + " with ID " + ID + " is switched on.");
+			System.out.println("Light with name " + name + " and ID " + ID + " is switched on.");
 		}
 		return "{\"Error\" : NULL}";
 	}
@@ -120,51 +158,7 @@ public class Light implements LightProto {
 		return 0;
 	}
 	
-	public void runServer() {
-		try
-		{
-			server = new SaslSocketServer(new SpecificResponder(LightProto.class,
-					this), new InetSocketAddress(IPAddress, 6790+ID));
-		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
-			System.exit(1);
-		}
-		server.start();
-	}
-	
-	public void stopServer() {
-		try {
-			server.join();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public void pullServer() {
-		try {
-			proxy.sendController();
-		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	@Override
-	public int ReceiveCoord(CharSequence server_ip, int port) throws AvroRemoteException {
-		this.server_ip_address = server_ip.toString();
-		try {
-			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
-			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		//System.out.println("New leader: " + server_ip);
-		return 0;
-	}
-	
+
 	/************
 	 * ELECTION *
 	 ************/
@@ -201,6 +195,7 @@ public class Light implements LightProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElection(receivedID);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -223,6 +218,7 @@ public class Light implements LightProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElected(serverIP, port);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -250,10 +246,8 @@ public class Light implements LightProto {
 				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
-			//System.out.println("leader elected!");
 			// Forward elected message
 			int nextID = this.getNextID(this.ID);
 			CharSequence nextIP = this.getIP(nextID);
@@ -267,6 +261,23 @@ public class Light implements LightProto {
 		return " ";
 	}
 	
+	@Override
+	public int ReceiveCoord(CharSequence server_ip, int port) throws AvroRemoteException {
+		this.server_ip_address = server_ip.toString();
+		try {
+			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
+			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			System.err.println("[Error] Failed to start server");
+		}
+		return 0;
+	}
+	
+	
+	/*****************
+	 * UPDATE UIDMAP *
+	 *****************/
 	@Override
 	public CharSequence update_uidmap(CharSequence json_uidmap) throws AvroRemoteException {
 		try {
@@ -293,7 +304,7 @@ public class Light implements LightProto {
 				this.uidmap.put(id, new Device(type, online, ip_address, has_local_connect));
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to update uidmap");
 			return "update_uidmap" + e.toString();
 		}	
 		return " ";
@@ -307,10 +318,14 @@ public class Light implements LightProto {
 		try {
 			proxy.i_am_alive(this.ID);	
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
+	
+	
+	
+	/**********
+	 ** MAIN ** 
+	 **********/
 	
 	public static void main(String[] args) {
 		// Connect to server
@@ -325,10 +340,11 @@ public class Light implements LightProto {
 		myLight.runServer();
 		myLight.pullServer();
 		
-		while(true){
-			int a;
-		}
+		reader.close();
 		
+		while(true){
+			continue;
+		}
 		//myLight.stopServer();
 	}
 	

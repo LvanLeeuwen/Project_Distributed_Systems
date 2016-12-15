@@ -11,7 +11,6 @@ import java.util.Scanner;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutionException;
-import java.util.Arrays;
 import java.util.ArrayList;
 
 import org.apache.avro.AvroRemoteException;
@@ -60,6 +59,7 @@ public class TemperatureSensor implements SensorProto {
 	private Timer timer;
 	final static int wtna = Controller.check_alive_interval / 3; 
 	
+	
 	/******************
 	 ** CONSTRUCTORS **
 	 ******************/
@@ -69,6 +69,7 @@ public class TemperatureSensor implements SensorProto {
 		server_ip_address = server_ip;
 	}
 	
+	
 	/**************************
 	 ** SERVER FUNCTIONALITY **
 	 **************************/
@@ -77,23 +78,22 @@ public class TemperatureSensor implements SensorProto {
 			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 			proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
 			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
-			System.out.println("Connected to server");
+			
 			CharSequence response = proxyASynchrone.connect(1, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("Error")) throw new Exception();
+			
 			ID = json.getInt("UID");
 			name = "sensor" + ID;
 			temperature = initTemp;
-			System.out.println("name: " + name + " ID: " + ID);
+			System.out.println("Connected to server with name " + name + " and ID " + ID);
 			
 			// Start timer for I'm alive
 			timer = new Timer();
-			ac = new AliveCaller(this);
-									
+			ac = new AliveCaller(this);					
 			timer.scheduleAtFixedRate(ac, wtna, wtna);
 		} catch (Exception e) {
-			System.err.println("[error] failed to connect to server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to connect to server");
 			System.exit(1);
 		}
 	}
@@ -104,10 +104,8 @@ public class TemperatureSensor implements SensorProto {
 			server = new SaslSocketServer(new SpecificResponder(LightProto.class,
 					this), new InetSocketAddress(IPAddress, 6790+ID));
 		}catch (IOException e){
-			System.err.println("[error] failed to start server");
-			e.printStackTrace(System.err);
+			System.err.println("[Error] Failed to start server");
 			System.exit(1);
-
 		}
 		server.start();
 	}
@@ -116,7 +114,6 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			server.join();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -125,10 +122,10 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			proxyASynchrone.sendController();
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to pull from server");
 		}
 	}
+	
 	
 	/*******************************
 	 ** TEMPERATURE FUNCTIONALITY **
@@ -144,11 +141,12 @@ public class TemperatureSensor implements SensorProto {
 		// Try to send the new temperature to the server
 		try {
 			if (unsendTemperatures.isEmpty()) {
+				// Send only the new temperature
 				proxyASynchrone.update_temperature(ID, temperature, future);
 				JSONObject json = new JSONObject(future.get().toString());
 				if (!json.isNull("Error")) {
 					CharSequence error = json.getString("Error");
-					System.out.println("Error: " + error);
+					System.err.println("[Error] Failed to update temperature: " + error);
 				} 
 			} else {
 				// Send all unsent temperatures.
@@ -158,9 +156,8 @@ public class TemperatureSensor implements SensorProto {
 					JSONObject json = new JSONObject(future.get().toString());
 					if (!json.isNull("Error")) {
 						CharSequence error = json.getString("Error");
-						System.out.println("Error: " + error);
+						System.err.println("[Error] Failed to update temperature: " + error);
 					} else {
-						System.out.println("Verzonden unsend");
 						unsendTemperatures.remove(temp);
 					}
 				}
@@ -168,17 +165,12 @@ public class TemperatureSensor implements SensorProto {
 		} catch (ExecutionException e) {
 			if (unsendTemperatures.isEmpty()) {
 				unsendTemperatures.add(temperature);
-				System.out.println("Toegevoegd aan unsend");
 			} else {
-				e.printStackTrace();
+				// New temperature has already been added to unsendTemperatures.
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			e.printStackTrace();
 		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			System.err.println("[Error] Failed to send temperature");
+		} 
 	}
 	
 	
@@ -218,6 +210,7 @@ public class TemperatureSensor implements SensorProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElection(receivedID);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -240,6 +233,7 @@ public class TemperatureSensor implements SensorProto {
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
 				lproxy.receiveElected(serverIP, port);
 			}
+			cand.close();
 			return true;
 		} catch (IOException e) {
 			return false;
@@ -267,10 +261,8 @@ public class TemperatureSensor implements SensorProto {
 				sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				System.err.println("[Error] Failed to start server");
 			}
-			System.out.println("leader elected!");
 			// Forward elected message
 			int nextID = this.getNextID(this.ID);
 			CharSequence nextIP = this.getIP(nextID);
@@ -291,13 +283,15 @@ public class TemperatureSensor implements SensorProto {
 			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxyASynchrone = SpecificRequestor.getClient(ServerProto.Callback.class, sensor);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to start server");
 		}
-		System.out.println("New leader: " + server_ip);
 		return 0;
 	}
 	
+	
+	/*******************
+	 ** UPDATE UIDMAP **
+	 *******************/
 	@Override
 	public CharSequence update_uidmap(CharSequence json_uidmap) throws AvroRemoteException {
 		try {
@@ -324,7 +318,7 @@ public class TemperatureSensor implements SensorProto {
 				this.uidmap.put(id, new Device(type, online, ip_address, has_local_connect));
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			System.err.println("[Error] Failed to update uidmap");
 			return "update_uidmap" + e.toString();
 		}	
 		return " ";
@@ -338,8 +332,6 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			proxyASynchrone.i_am_alive(this.ID);	
 		} catch (AvroRemoteException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
 	}
 	
@@ -361,6 +353,8 @@ public class TemperatureSensor implements SensorProto {
 		mySensor.runServer();
 		mySensor.pullServer();
 		mySensor.sent_temperature();
+		
+		reader.close();
 		
 		// Set timer
 		Timer timer = new Timer();
