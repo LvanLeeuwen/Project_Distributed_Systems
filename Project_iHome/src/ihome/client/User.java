@@ -415,81 +415,6 @@ public class User implements UserProto {
 		return "";
 	}
 	
-	public void useController()
-	{
-		Scanner reader = new Scanner(System.in);
-		while(true){
-			System.out.println("What do you want to do?");
-			System.out.println("1) Get in-session list");
-			//System.out.println("2) Get state light");
-			System.out.println("3) Switch state light");
-			System.out.println("4) Get contents fridge");
-			System.out.println("5) Get current en removed contents fridge");
-			System.out.println("6) Get temperature list");
-			System.out.println("7) send controller");
-			System.out.println("8) exit" );
-			int in = reader.nextInt();
-			if(in == 1){
-				
-				controller.printInSession();
-				/*try {
-					controller.printInSession();
-					//System.out.println(controller.get_all_devices());
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}*/
-			} /*else if(in ==2){
-				System.out.println("Give id:");
-				int id = reader.nextInt();
-				try {
-					controller.get_light_state(id);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} */else if(in ==3){
-				System.out.println("Give id:");
-				int id = reader.nextInt();
-				try {
-					controller.switch_state_light(id);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if (in == 4) {
-				System.out.println("Give id:");
-				int id = reader.nextInt();
-				try {
-					controller.get_fridge_contents(id);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if (in == 5) {
-				System.out.println("Give id:");
-				int id = reader.nextInt();
-				controller.get_all_fridge_contents(id);
-			} else if (in == 6) {
-				try {
-					System.out.println(controller.get_temperature_list());
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if (in == 7) {
-				try {
-					controller.sendController();
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else {
-				return;
-			}
-		}
-	}
-	
 	
 	/*********************
 	 * ENTER/LEAVE HOUSE *
@@ -568,21 +493,20 @@ public class User implements UserProto {
 			System.out.println("What do you want to do?");
 			System.out.println("1) Get list of all devices and users");
 			System.out.println("2) Get overview of the state of all the lights");
-			System.out.println("3) Switch state light");
+			System.out.println("3) Switch light on/off");
 			System.out.println("4) Get contents fridge");
 			System.out.println("5) Get current temperature");
 			System.out.println("6) Get history of temperature");
-			System.out.println("7) Start connection with Fridge");
-			System.out.println("8) Show my controllers devices");
-			System.out.println("9) Start leader election");
-			System.out.println("10) use Controller");
-			System.out.println("11) Leave house");
-			System.out.println("12) Enter house");
+			System.out.println("7) Open fridge");
+			System.out.println("8) Leave house");
+			System.out.println("9) Enter house");
 
 			
 			int in = reader.nextInt();
 			if(in == 1){		// Get list of all devices and users.
 				try {
+					
+					
 					CharSequence devices = myUser.proxy.get_all_devices();
 					System.out.println(devices);
 				} catch (AvroRemoteException e) {
@@ -598,7 +522,7 @@ public class User implements UserProto {
 					e.printStackTrace();
 				}
 			} else if(in ==3){	// Switch state light
-				System.out.println("Give id:");
+				System.out.println("Give id of light:");
 				int id = reader.nextInt();
 				try {
 					CharSequence result = myUser.proxy.switch_state_light(id);
@@ -639,19 +563,8 @@ public class User implements UserProto {
 				int id = reader.nextInt();
 				myUser.connectToFridge(id);
 			} else if (in == 8) {
-				try {
-					System.out.println(myUser.controller.get_all_devices());
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}			
-			} else if (in == 9) {
-				myUser.startElection();
-			} else if (in == 10){
-				myUser.useController();
-			} else if (in == 11) {
 				myUser.leaveHouse();
-			} else if (in == 12) {
+			} else if (in == 9) {
 				myUser.enterHouse();
 			}else {
 			

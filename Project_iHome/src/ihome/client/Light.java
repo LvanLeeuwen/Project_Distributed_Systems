@@ -129,7 +129,6 @@ public class Light implements LightProto {
 			System.err.println("[error] failed to start server");
 			e.printStackTrace(System.err);
 			System.exit(1);
-
 		}
 		server.start();
 	}
@@ -162,7 +161,7 @@ public class Light implements LightProto {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println("New leader: " + server_ip);
+		//System.out.println("New leader: " + server_ip);
 		return 0;
 	}
 	
@@ -254,7 +253,7 @@ public class Light implements LightProto {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			System.out.println("leader elected!");
+			//System.out.println("leader elected!");
 			// Forward elected message
 			int nextID = this.getNextID(this.ID);
 			CharSequence nextIP = this.getIP(nextID);
