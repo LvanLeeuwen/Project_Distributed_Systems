@@ -101,8 +101,7 @@ public class Controller implements ServerProto
 			return "{\"Error\" : NULL}";
 		}catch(Exception e){
 			return "{\"Error\" : \"[Error] " + e.getMessage();
-		}
-		
+		}	
 	}
 	
 	public void runServer() {
@@ -592,7 +591,7 @@ public class Controller implements ServerProto
 	public int i_am_alive(int uid) throws AvroRemoteException {
 		if (uidmap.get(uid).type == 0) {
 			this.uidalive.put(uid, true);
-		} else if (uidmap.get(uid).type == 2) {
+		} else {
 			this.fridgeAlive.put(uid, true);
 		}
 		return 0;

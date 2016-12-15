@@ -55,6 +55,10 @@ public class TemperatureSensor implements SensorProto {
 	// Controller variables
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
 	
+	// Alive caller variables
+	private AliveCaller ac;
+	private Timer timer;
+	final static int wtna = Controller.check_alive_interval / 3; 
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -81,6 +85,12 @@ public class TemperatureSensor implements SensorProto {
 			name = "sensor" + ID;
 			temperature = initTemp;
 			System.out.println("name: " + name + " ID: " + ID);
+			
+			// Start timer for I'm alive
+			timer = new Timer();
+			ac = new AliveCaller(this);
+									
+			timer.scheduleAtFixedRate(ac, wtna, wtna);
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
 			e.printStackTrace(System.err);
@@ -318,6 +328,19 @@ public class TemperatureSensor implements SensorProto {
 			return "update_uidmap" + e.toString();
 		}	
 		return " ";
+	}
+
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
+	
+	public void send_alive(){
+		try {
+			proxyASynchrone.i_am_alive(this.ID);	
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/************************

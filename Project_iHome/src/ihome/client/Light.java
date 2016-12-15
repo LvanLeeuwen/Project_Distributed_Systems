@@ -8,6 +8,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Timer;
 
 import org.apache.avro.AvroRemoteException;
 import org.apache.avro.ipc.SaslSocketServer;
@@ -46,6 +47,10 @@ public class Light implements LightProto {
 	// Controller variables
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
 	
+	// Alive caller variables
+	private AliveCaller ac;
+	private Timer timer;
+	final static int wtna = Controller.check_alive_interval / 3; 
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -70,6 +75,11 @@ public class Light implements LightProto {
 			ID = json.getInt("UID");
 			name = "light" + ID;
 			System.out.println("name: " + name + " ID: " + ID);
+			// Start timer for I'm alive
+			timer = new Timer();
+			ac = new AliveCaller(this);
+						
+			timer.scheduleAtFixedRate(ac, wtna, wtna);
 		} catch (Exception e) {
 			System.err.println("[error] failed to connect to server");
 			e.printStackTrace(System.err);
@@ -288,6 +298,19 @@ public class Light implements LightProto {
 			return "update_uidmap" + e.toString();
 		}	
 		return " ";
+	}
+	
+	/*************************
+	 ** ALIVE FUNCTIONALITY **
+	 *************************/
+	
+	public void send_alive(){
+		try {
+			proxy.i_am_alive(this.ID);	
+		} catch (AvroRemoteException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public static void main(String[] args) {
