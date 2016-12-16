@@ -14,7 +14,7 @@
 			"response" : "string"
 		},
 		"receiveElected" : {
-			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}],
+			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}, {"name":"serverID", "type":"int"}],
 			"response" : "string"
 		},
 		"ReceiveCoord" : {

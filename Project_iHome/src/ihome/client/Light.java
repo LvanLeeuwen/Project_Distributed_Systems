@@ -43,6 +43,7 @@ public class Light implements LightProto {
 	
 	// Election variables
 	private boolean participant = false;
+	private int lastServerID = -1;
 	
 	// Controller variables
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
@@ -180,6 +181,9 @@ public class Light implements LightProto {
 	}
 	
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
+		if(nextID == this.lastServerID){
+			return false;
+		}
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.uidmap.get(nextID).type == 0){
@@ -202,21 +206,24 @@ public class Light implements LightProto {
 		}
 	}
 	
-	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port) {
+	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
+		if(nextID == this.lastServerID){
+			return false;
+		}
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.uidmap.get(nextID).type == 0){
 				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-				uproxy.receiveElected(serverIP, port);
+				uproxy.receiveElected(serverIP, port, sid);
 			} else if (this.uidmap.get(nextID).type == 1){
 				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-				sproxy.receiveElected(serverIP, port);
+				sproxy.receiveElected(serverIP, port, sid);
 			} else if (this.uidmap.get(nextID).type == 2){
 				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-				fproxy.receiveElected(serverIP, port);
+				fproxy.receiveElected(serverIP, port, sid);
 			} else if (this.uidmap.get(nextID).type == 3){
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-				lproxy.receiveElected(serverIP, port);
+				lproxy.receiveElected(serverIP, port, sid);
 			}
 			cand.close();
 			return true;
@@ -238,20 +245,21 @@ public class Light implements LightProto {
 	}
 	
 	@Override
-	public CharSequence receiveElected(CharSequence serverIP, int port) throws AvroRemoteException {
+	public CharSequence receiveElected(CharSequence serverIP, int port, int serverID) throws AvroRemoteException {
 		if (this.participant) {
 			this.participant = false;
 			this.server_ip_address = serverIP.toString();
 			try {
 				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
+				this.lastServerID = serverID;
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
 			// Forward elected message
 			int nextID = this.getNextID(this.ID);
 			CharSequence nextIP = this.getIP(nextID);
-			while (!this.sendElected(nextID, nextIP, serverIP, port)) {
+			while (!this.sendElected(nextID, nextIP, serverIP, port, serverID)) {
 				nextID = this.getNextID(nextID);
 				nextIP = this.getIP(nextID);
 			}
@@ -267,6 +275,7 @@ public class Light implements LightProto {
 		try {
 			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
+			this.lastServerID = -1;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			System.err.println("[Error] Failed to start server");

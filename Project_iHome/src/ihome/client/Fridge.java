@@ -48,6 +48,7 @@ public class Fridge implements FridgeProto {
 	// Leader election variables
 	private Boolean participant = false;
 	private Boolean isLeader = false;
+	private int lastServerID = -1;
 	
 	
 	
@@ -136,6 +137,9 @@ public class Fridge implements FridgeProto {
 	 ** ELECTION **
 	 **************/
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
+		if(nextID == lastServerID){
+			return false;
+		}
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.controller.getUidmap().get(nextID).type == 0){
@@ -158,21 +162,24 @@ public class Fridge implements FridgeProto {
 		}
 	}
 	
-	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port) {
+	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
+		if(nextID == this.lastServerID){
+			return false;
+		}
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.controller.getUidmap().get(nextID).type == 0){
 				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-				uproxy.receiveElected(serverIP, port);
+				uproxy.receiveElected(serverIP, port, sid);
 			} else if (this.controller.getUidmap().get(nextID).type == 1){
 				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-				sproxy.receiveElected(serverIP, port);
+				sproxy.receiveElected(serverIP, port, sid);
 			} else if (this.controller.getUidmap().get(nextID).type == 2){
 				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-				fproxy.receiveElected(serverIP, port);
+				fproxy.receiveElected(serverIP, port, sid);
 			} else if (this.controller.getUidmap().get(nextID).type == 3){
 				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-				lproxy.receiveElected(serverIP, port);
+				lproxy.receiveElected(serverIP, port, sid);
 			}
 			cand.close();
 			return true;
@@ -246,13 +253,14 @@ public class Fridge implements FridgeProto {
 			this.controller.runServer();
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);	
+				this.lastServerID = this.ID;
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
 			int nextID = this.controller.getNextID(this.ID);
 			CharSequence nextIP = this.controller.getIP(nextID);
-			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788)) {
+			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788, this.ID)) {
 				nextID = this.controller.getNextID(nextID);
 				nextIP = this.controller.getIP(nextID);
 			}
@@ -261,20 +269,21 @@ public class Fridge implements FridgeProto {
 	}
 	
 	@Override
-	public CharSequence receiveElected(CharSequence serverIP, int port) throws AvroRemoteException {
+	public CharSequence receiveElected(CharSequence serverIP, int port, int serverID) throws AvroRemoteException {
 		if (this.participant) {
 			this.participant = false;
 			this.server_ip_address = serverIP.toString();
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
+				this.lastServerID = serverID;
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
 			// Forward elected message
 			int nextID = this.controller.getNextID(this.ID);
 			CharSequence nextIP = this.controller.getIP(nextID);
-			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788)) {
+			while (!this.sendElected(nextID, nextIP, serverIP, port, serverID)) {
 				nextID = this.controller.getNextID(nextID);
 				nextIP = this.controller.getIP(nextID);
 			}
@@ -290,6 +299,7 @@ public class Fridge implements FridgeProto {
 		try {
 			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
+			this.lastServerID = -1;
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
 		}
