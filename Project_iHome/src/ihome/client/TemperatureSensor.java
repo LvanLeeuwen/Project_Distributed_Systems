@@ -202,16 +202,16 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.uidmap.get(nextID).type == 0){
-				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
+				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.Callback.class, cand);
 				uproxy.receiveElection(receivedID);
 			} else if (this.uidmap.get(nextID).type == 1){
-				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
+				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.Callback.class, cand);
 				sproxy.receiveElection(receivedID);
 			} else if (this.uidmap.get(nextID).type == 2){
-				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
+				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.Callback.class, cand);
 				fproxy.receiveElection(receivedID);
 			} else if (this.uidmap.get(nextID).type == 3){
-				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
+				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.Callback.class, cand);
 				lproxy.receiveElection(receivedID);
 			}
 			cand.close();
@@ -228,16 +228,16 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.uidmap.get(nextID).type == 0){
-				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
+				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.Callback.class, cand);
 				uproxy.receiveElected(serverIP, port, sid);
 			} else if (this.uidmap.get(nextID).type == 1){
-				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
+				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.Callback.class, cand);
 				sproxy.receiveElected(serverIP, port, sid);
 			} else if (this.uidmap.get(nextID).type == 2){
-				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
+				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.Callback.class, cand);
 				fproxy.receiveElected(serverIP, port, sid);
 			} else if (this.uidmap.get(nextID).type == 3){
-				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
+				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.Callback.class, cand);
 				lproxy.receiveElected(serverIP, port, sid);
 			}
 			cand.close();

@@ -627,6 +627,7 @@ public class Controller implements ServerProto
 	private int old_nr_users = 0;
 	public void check_alive(){
 		// Check alive users
+		System.out.println(this.fridgeAlive.toString());
 		
 		int nr_users = 0;
 		for(int i : this.uidalive.keySet()){
