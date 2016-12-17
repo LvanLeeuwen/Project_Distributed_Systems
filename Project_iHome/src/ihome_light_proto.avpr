@@ -32,6 +32,10 @@
 		"update_uidmap" : {
 			"request" : [{"name" : "json_uidmap", "type" : "string"}],
 			"response" : "string"
+		},
+		"getLeader" : {
+			"request" : [],
+			"response" : "string"
 		}
 	}
 }

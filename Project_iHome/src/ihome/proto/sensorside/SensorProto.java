@@ -8,11 +8,12 @@ package ihome.proto.sensorside;
 @SuppressWarnings("all")
 @org.apache.avro.specific.AvroGenerated
 public interface SensorProto {
-  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"SensorProto\",\"namespace\":\"ihome.proto.sensorside\",\"types\":[],\"messages\":{\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"}],\"response\":\"int\"},\"receiveElection\":{\"request\":[{\"name\":\"receivedID\",\"type\":\"int\"}],\"response\":\"string\"},\"receiveElected\":{\"request\":[{\"name\":\"serverIP\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"},{\"name\":\"serverID\",\"type\":\"int\"}],\"response\":\"string\"},\"update_uidmap\":{\"request\":[{\"name\":\"json_uidmap\",\"type\":\"string\"}],\"response\":\"string\"}}}");
+  public static final org.apache.avro.Protocol PROTOCOL = org.apache.avro.Protocol.parse("{\"protocol\":\"SensorProto\",\"namespace\":\"ihome.proto.sensorside\",\"types\":[],\"messages\":{\"ReceiveCoord\":{\"request\":[{\"name\":\"server_ip\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"}],\"response\":\"int\"},\"receiveElection\":{\"request\":[{\"name\":\"receivedID\",\"type\":\"int\"}],\"response\":\"string\"},\"receiveElected\":{\"request\":[{\"name\":\"serverIP\",\"type\":\"string\"},{\"name\":\"port\",\"type\":\"int\"},{\"name\":\"serverID\",\"type\":\"int\"}],\"response\":\"string\"},\"update_uidmap\":{\"request\":[{\"name\":\"json_uidmap\",\"type\":\"string\"}],\"response\":\"string\"},\"getLeader\":{\"request\":[],\"response\":\"string\"}}}");
   int ReceiveCoord(java.lang.CharSequence server_ip, int port) throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence receiveElection(int receivedID) throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence receiveElected(java.lang.CharSequence serverIP, int port, int serverID) throws org.apache.avro.AvroRemoteException;
   java.lang.CharSequence update_uidmap(java.lang.CharSequence json_uidmap) throws org.apache.avro.AvroRemoteException;
+  java.lang.CharSequence getLeader() throws org.apache.avro.AvroRemoteException;
 
   @SuppressWarnings("all")
   public interface Callback extends SensorProto {
@@ -21,5 +22,6 @@ public interface SensorProto {
     void receiveElection(int receivedID, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
     void receiveElected(java.lang.CharSequence serverIP, int port, int serverID, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
     void update_uidmap(java.lang.CharSequence json_uidmap, org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
+    void getLeader(org.apache.avro.ipc.Callback<java.lang.CharSequence> callback) throws java.io.IOException;
   }
 }

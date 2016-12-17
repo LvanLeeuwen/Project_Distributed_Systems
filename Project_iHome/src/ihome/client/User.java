@@ -2,6 +2,7 @@ package ihome.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
 
@@ -15,6 +16,7 @@ import org.apache.avro.ipc.specific.SpecificResponder;
 import org.json.*;
 
 import ihome.server.Controller;
+import ihome.server.Device;
 import ihome.proto.fridgeside.FridgeProto;
 import ihome.proto.serverside.ServerProto;
 import ihome.proto.userside.UserProto;
@@ -63,8 +65,14 @@ public class User implements UserProto {
 	 **************************/
 	public void connect_to_server() {
 		try {
-			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
-			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			try {
+				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			} catch (Exception e) {
+				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+				lastServerID = -2;
+			}
 			
 			CharSequence response = proxy.connect(0, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
@@ -278,6 +286,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
 				this.lastServerID = serverID;
+				System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -290,6 +299,7 @@ public class User implements UserProto {
 			}
 		} else {
 			// Discard. Election is over.
+			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 		}
 		return " ";
 	}
@@ -301,12 +311,70 @@ public class User implements UserProto {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
 			this.lastServerID = -1;
+			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
 		}
 		this.participant = false;
 		this.isLeader = false;
 		return 0;
+	}
+	
+	@Override
+	public CharSequence getLeader() throws AvroRemoteException {
+		try {
+			JSONObject json = new JSONObject();
+			json.put("lastServerID", lastServerID);
+			return json.toString();
+		} catch (JSONException e) {
+			return "";
+		}
+	}
+	
+	public void askLeaderID() {
+		CharSequence response = "";
+		Map<Integer, Device> uidmap = this.controller.getUidmap();
+		for (int id : uidmap.keySet()) {
+			try {
+				if (uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+					response = userproxy.getLeader();
+					user.close();
+				} else if (uidmap.get(id).type == 2 && uidmap.get(id).is_online) {
+					// Send me to fridge
+					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
+					response = fridgeproxy.getLeader();
+					fridge.close();
+				} else if (uidmap.get(id).type == 1 && uidmap.get(id).is_online) {
+					// Send uidmap to sensor
+					Transceiver sensor = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					SensorProto sensorproxy = SpecificRequestor.getClient(SensorProto.class, sensor);
+					response = sensorproxy.getLeader();
+					sensor.close();
+				} else if (uidmap.get(id).type == 3 && uidmap.get(id).is_online) {
+					// Send uidmap to light
+					Transceiver light = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, light);
+					response = lightproxy.getLeader();
+					light.close();
+				}
+			} catch (Exception e) {
+				continue;
+			}
+			if (response != "") break;
+		}
+		// Unpack response
+		if (response != "") {
+			JSONObject json;
+			try {
+				json = new JSONObject(response.toString());
+				lastServerID = json.getInt("lastServerID");
+			} catch (JSONException e) {
+				System.err.println("[Error] JSON exception");
+			}
+		}
 	}
 	
 	
@@ -461,6 +529,11 @@ public class User implements UserProto {
 		myUser.connect_to_server();
 		myUser.runServer();
 		myUser.pullServer();
+		if (myUser.lastServerID == -2) {
+			// Ask leader ID
+			myUser.askLeaderID();
+		}
+		
 		
 		while (true) {
 
@@ -469,7 +542,7 @@ public class User implements UserProto {
 			 * 		Exit the system (disconnect from server)
 			 * 		Ask controller for list of all devices and other users
 			 * 		Ask controller for overview of the state of all the lights
-			 * 		Ask controller to switch specif@param argsic light to another state
+			 * 		Ask controller to switch specific light to another state
 			 * 		Ask controller for overview of inventory of a fridge
 			 * 		Ask controller to open a fridge 
 			 * 		Ask opened fridge to add/remove items.

@@ -28,6 +28,10 @@
 		"notify_user_leaves" : {
 			"request" : [{"name" : "uid", "type" : "int"}],
 			"response" : "int"
+		},
+		"getLeader" : {
+			"request" : [],
+			"response" : "string"
 		}
 	}
 }
