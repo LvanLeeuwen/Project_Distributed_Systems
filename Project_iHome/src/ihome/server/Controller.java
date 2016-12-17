@@ -191,6 +191,7 @@ public class Controller implements ServerProto
 			json.put("nextID", nextID);
 			json.put("sensormap", sensormap);
 			json.put("uidalive", uidalive);
+			json.put("fridgeAlive", fridgeAlive);
 			/*
 			 * uidmap:
 			 * each device has:
@@ -255,6 +256,8 @@ public class Controller implements ServerProto
 			json.put("nextID", nextID);
 			json.put("sensormap", sensormap);
 			json.put("uidalive", uidalive);
+			json.put("fridgeAlive", fridgeAlive);
+			
 			/*
 			 * uidmap:
 			 * each device has:
@@ -323,6 +326,8 @@ public class Controller implements ServerProto
 			json.put("nextID", nextID);
 			json.put("sensormap", sensormap);
 			json.put("uidalive", uidalive);
+			json.put("fridgeAlive", fridgeAlive);
+			
 			/*
 			 * uidmap:
 			 * each device has:
@@ -384,6 +389,7 @@ public class Controller implements ServerProto
 				uidmap.put(id, new Device(type, online, ip_address, has_local_connect));
 			}
 			
+			// sensormap 
 			sensormap.clear();
 			JSONObject jsonsensormap = json.getJSONObject("sensormap");
 			keys = jsonsensormap.keys();
@@ -400,6 +406,7 @@ public class Controller implements ServerProto
 				sensormap.put(id, sensordata);
 			}
 			
+			// uidalive
 			uidalive.clear();
 			JSONObject jsonuidalive = json.getJSONObject("uidalive");
 			keys = jsonuidalive.keys();
@@ -408,6 +415,17 @@ public class Controller implements ServerProto
 				int id = Integer.parseInt(nextKey);
 				boolean alive = jsonuidalive.getBoolean(nextKey);
 				uidalive.put(id, alive);
+			}
+			
+			// fridgealive
+			fridgeAlive.clear();
+			JSONObject jsonFridgeAlive = json.getJSONObject("fridgeAlive");
+			keys = jsonFridgeAlive.keys();
+			while (keys.hasNext()) {
+				String nextKey = keys.next();
+				int id = Integer.parseInt(nextKey);
+				boolean alive = jsonFridgeAlive.getBoolean(nextKey);
+				fridgeAlive.put(id, alive);
 			}
 		} catch (Exception e) {
 			System.err.println("[Error] Failed to update controller");
