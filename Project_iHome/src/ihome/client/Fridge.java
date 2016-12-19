@@ -74,7 +74,7 @@ public class Fridge implements FridgeProto {
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-			} catch(AvroRemoteException e) {
+			} catch(Exception e) {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
 				lastServerID = -2;
@@ -441,7 +441,10 @@ public class Fridge implements FridgeProto {
 	
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		return controller.updateController(jsonController);
+		if (this.lastServerID != this.ID) {
+			return controller.updateController(jsonController);
+		}
+		return " ";
 	}
 	
 	

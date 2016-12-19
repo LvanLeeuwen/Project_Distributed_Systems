@@ -73,7 +73,7 @@ public class Light implements LightProto {
 			try {
 				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
-			} catch (AvroRemoteException e) {
+			} catch (Exception e) {
 				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
 				lastServerID = -2;

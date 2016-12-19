@@ -209,7 +209,9 @@ public class User implements UserProto {
 					this.controller.runServer();
 					try {
 						user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
+						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+						this.lastServerID = this.ID;
+						System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 					} catch (IOException e) {
 						System.err.println("[Error] Failed to start server");
 					}
@@ -223,7 +225,9 @@ public class User implements UserProto {
 			this.controller.runServer();
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);	
+				this.lastServerID = this.ID;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -263,6 +267,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);			
 				this.lastServerID = this.ID;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -286,7 +291,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
 				this.lastServerID = serverID;
-				System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -299,7 +304,7 @@ public class User implements UserProto {
 			}
 		} else {
 			// Discard. Election is over.
-			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
+			System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 		}
 		return " ";
 	}
@@ -311,7 +316,7 @@ public class User implements UserProto {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
 			this.lastServerID = -1;
-			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
+			System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
 		}
@@ -467,7 +472,9 @@ public class User implements UserProto {
 	 ************************/
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		controller.updateController(jsonController);
+		if (this.lastServerID != this.ID) {
+			controller.updateController(jsonController);
+		}
 		return "";
 	}
 	

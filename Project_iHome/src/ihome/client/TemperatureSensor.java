@@ -78,7 +78,7 @@ public class TemperatureSensor implements SensorProto {
 			try {
 				sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
-			} catch (AvroRemoteException e) {
+			} catch (Exception e) {
 				sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
 				lastServerID = -2;
