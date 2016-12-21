@@ -203,6 +203,7 @@ public class Fridge implements FridgeProto {
 		int nextID = this.controller.getNextID(this.ID);
 		if (nextID != this.ID) {
 			CharSequence nextIP = this.controller.getIP(nextID);
+			
 			while (!this.sendElection(nextID, nextIP, this.ID)) {
 				nextID = this.controller.getNextID(nextID);
 				if (nextID == this.ID) {
@@ -210,7 +211,10 @@ public class Fridge implements FridgeProto {
 					this.controller.runServer();
 					try {
 						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
+						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
+						this.lastServerID = this.ID;
+						this.server_ip_address = this.IPAddress;
+						System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 					} catch (IOException e) {
 						System.err.println("[Error] Failed to start server");
 					}
@@ -224,7 +228,10 @@ public class Fridge implements FridgeProto {
 			this.controller.runServer();
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);				
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
+				this.lastServerID = this.ID;
+				this.server_ip_address = this.IPAddress;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -264,6 +271,8 @@ public class Fridge implements FridgeProto {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);	
 				this.lastServerID = this.ID;
+				this.server_ip_address = this.IPAddress;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -410,7 +419,6 @@ public class Fridge implements FridgeProto {
 			item = item +  "0";
 		}
 		items.add(item);
-		//	this.add_item(item);
 		return "test";
 	}
 
@@ -419,13 +427,11 @@ public class Fridge implements FridgeProto {
 		this.items.remove(item);
 		if(this.items.isEmpty())
 		proxy.notify_empty_fridge(this.ID);
-		// TODO Auto-generated method stub
 		return "test";
 	}
 	
 	@Override
 	public CharSequence send_current_items() throws AvroRemoteException {
-	//	return "test";
 		return Arrays.toString(items.toArray());
 	}
 

@@ -133,7 +133,7 @@ public class User implements UserProto {
 			if (!this.participant) {
 				this.startElection();
 			}
-		}
+		} 
 	}
 	
 	
@@ -145,7 +145,6 @@ public class User implements UserProto {
 			return false;
 		}
 		try {
-			System.out.println("" + this.ID + "received an election");
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.controller.getUidmap().get(nextID).type == 0){
 				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.Callback.class, cand);
@@ -200,8 +199,6 @@ public class User implements UserProto {
 		if (nextID != this.ID) {
 			CharSequence nextIP = this.controller.getIP(nextID);
 			
-		//	this.sendElection(nextID, nextIP, this.ID);
-			
 			while (!this.sendElection(nextID, nextIP, this.ID)) {
 				nextID = this.controller.getNextID(nextID);
 				if (nextID == this.ID) {
@@ -211,6 +208,7 @@ public class User implements UserProto {
 						user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
 						this.lastServerID = this.ID;
+						this.server_ip_address = this.IPAddress;
 						System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 					} catch (IOException e) {
 						System.err.println("[Error] Failed to start server");
@@ -227,6 +225,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);	
 				this.lastServerID = this.ID;
+				this.server_ip_address = this.IPAddress;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
@@ -267,6 +266,7 @@ public class User implements UserProto {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);			
 				this.lastServerID = this.ID;
+				this.server_ip_address = this.IPAddress;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
@@ -419,7 +419,8 @@ public class User implements UserProto {
 		}
 		
 		try {
-			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(port));
+			String ip = this.controller.getIP(fridgeid).toString();
+			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(ip, port));
 			FridgeProto fridgeproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, fridge);
 			
 			Scanner reader = new Scanner(System.in);
@@ -446,9 +447,7 @@ public class User implements UserProto {
 					break;
 				}	
 			}
-			reader.close();			
 			proxy.release_fridge(fridgeid);
-			fridge.close();
 				
 		} catch (IOException e) {
 			try {
@@ -456,7 +455,7 @@ public class User implements UserProto {
 			} catch (AvroRemoteException e1) {
 				System.err.println("[Error] Failed to report fridge offline");
 			}
-			System.err.println("[Error] Failed to connect to fridge");
+			System.err.println("Fridge is offline");
 		}
 	}
 	
