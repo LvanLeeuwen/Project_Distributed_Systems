@@ -2,6 +2,7 @@ package ihome.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
 
@@ -15,6 +16,7 @@ import org.apache.avro.ipc.specific.SpecificResponder;
 import org.json.*;
 
 import ihome.server.Controller;
+import ihome.server.Device;
 import ihome.proto.fridgeside.FridgeProto;
 import ihome.proto.serverside.ServerProto;
 import ihome.proto.userside.UserProto;
@@ -45,7 +47,7 @@ public class User implements UserProto {
 	//leader election variables
 	private Boolean participant = false;
 	private Boolean isLeader = false;
-	
+	private int lastServerID = -1;
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -63,8 +65,14 @@ public class User implements UserProto {
 	 **************************/
 	public void connect_to_server() {
 		try {
-			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
-			proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			try {
+				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6789));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+			} catch (Exception e) {
+				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+				lastServerID = -2;
+			}
 			
 			CharSequence response = proxy.connect(0, IPAddress);
 			JSONObject json = new JSONObject(response.toString());
@@ -133,19 +141,23 @@ public class User implements UserProto {
 	 ** ELECTION FUNCTIONALITY **
 	 ****************************/
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
+		if(nextID == this.lastServerID){
+			return false;
+		}
 		try {
+			System.out.println("" + this.ID + "received an election");
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.controller.getUidmap().get(nextID).type == 0){
-				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
+				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.Callback.class, cand);
 				uproxy.receiveElection(receivedID);
 			} else if (this.controller.getUidmap().get(nextID).type == 1){
-				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
+				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.Callback.class, cand);
 				sproxy.receiveElection(receivedID);
 			} else if (this.controller.getUidmap().get(nextID).type == 2){
-				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
+				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.Callback.class, cand);
 				fproxy.receiveElection(receivedID);
 			} else if (this.controller.getUidmap().get(nextID).type == 3){
-				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
+				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.Callback.class, cand);
 				lproxy.receiveElection(receivedID);
 			}
 			cand.close();
@@ -155,21 +167,24 @@ public class User implements UserProto {
 		}
 	}
 	
-	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port) {
+	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
+		if(nextID == this.lastServerID){
+			return false;
+		}
 		try {
 			Transceiver cand = new SaslSocketTransceiver(new InetSocketAddress(ipaddress.toString(), 6790 + nextID));
 			if(this.controller.getUidmap().get(nextID).type == 0){
-				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, cand);
-				uproxy.receiveElected(serverIP, port);
+				UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.Callback.class, cand);
+				uproxy.receiveElected(serverIP, port, sid);
 			} else if (this.controller.getUidmap().get(nextID).type == 1){
-				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, cand);
-				sproxy.receiveElected(serverIP, port);
+				SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.Callback.class, cand);
+				sproxy.receiveElected(serverIP, port, sid);
 			} else if (this.controller.getUidmap().get(nextID).type == 2){
-				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, cand);
-				fproxy.receiveElected(serverIP, port);
+				FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.Callback.class, cand);
+				fproxy.receiveElected(serverIP, port, sid);
 			} else if (this.controller.getUidmap().get(nextID).type == 3){
-				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, cand);
-				lproxy.receiveElected(serverIP, port);
+				LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.Callback.class, cand);
+				lproxy.receiveElected(serverIP, port, sid);
 			}
 			cand.close();
 			return true;
@@ -184,6 +199,9 @@ public class User implements UserProto {
 		int nextID = this.controller.getNextID(this.ID);
 		if (nextID != this.ID) {
 			CharSequence nextIP = this.controller.getIP(nextID);
+			
+		//	this.sendElection(nextID, nextIP, this.ID);
+			
 			while (!this.sendElection(nextID, nextIP, this.ID)) {
 				nextID = this.controller.getNextID(nextID);
 				if (nextID == this.ID) {
@@ -191,7 +209,9 @@ public class User implements UserProto {
 					this.controller.runServer();
 					try {
 						user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
+						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
+						this.lastServerID = this.ID;
+						System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 					} catch (IOException e) {
 						System.err.println("[Error] Failed to start server");
 					}
@@ -205,7 +225,9 @@ public class User implements UserProto {
 			this.controller.runServer();
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);	
+				this.lastServerID = this.ID;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
@@ -243,40 +265,46 @@ public class User implements UserProto {
 			this.controller.runServer();
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
-				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);				
+				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);			
+				this.lastServerID = this.ID;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
 			int nextID = this.controller.getNextID(this.ID);
 			CharSequence nextIP = this.controller.getIP(nextID);
-			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788)) {
+			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788, this.ID)) {
 				nextID = this.controller.getNextID(nextID);
 				nextIP = this.controller.getIP(nextID);
 			}
+			
 		}
 		return " ";
 	}
 	
 	@Override
-	public CharSequence receiveElected(CharSequence serverIP, int port) throws AvroRemoteException {
+	public CharSequence receiveElected(CharSequence serverIP, int port, int serverID) throws AvroRemoteException {
 		if (this.participant) {
 			this.participant = false;
 			this.server_ip_address = serverIP.toString();
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
+				this.lastServerID = serverID;
+				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
 			}
 			// Forward elected message
 			int nextID = this.controller.getNextID(this.ID);
 			CharSequence nextIP = this.controller.getIP(nextID);
-			while (!this.sendElected(nextID, nextIP, this.IPAddress, 6788)) {
+			while (!this.sendElected(nextID, nextIP, serverIP, port, serverID)) {
 				nextID = this.controller.getNextID(nextID);
 				nextIP = this.controller.getIP(nextID);
 			}
 		} else {
 			// Discard. Election is over.
+			System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 		}
 		return " ";
 	}
@@ -287,12 +315,71 @@ public class User implements UserProto {
 		try {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
+			this.lastServerID = -1;
+			System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
 		}
 		this.participant = false;
 		this.isLeader = false;
 		return 0;
+	}
+	
+	@Override
+	public CharSequence getLeader() throws AvroRemoteException {
+		try {
+			JSONObject json = new JSONObject();
+			json.put("lastServerID", lastServerID);
+			return json.toString();
+		} catch (JSONException e) {
+			return "";
+		}
+	}
+	
+	public void askLeaderID() {
+		CharSequence response = "";
+		Map<Integer, Device> uidmap = this.controller.getUidmap();
+		for (int id : uidmap.keySet()) {
+			try {
+				if (uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
+					response = userproxy.getLeader();
+					user.close();
+				} else if (uidmap.get(id).type == 2 && uidmap.get(id).is_online) {
+					// Send me to fridge
+					Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					FridgeProto fridgeproxy = SpecificRequestor.getClient(FridgeProto.class, fridge);
+					response = fridgeproxy.getLeader();
+					fridge.close();
+				} else if (uidmap.get(id).type == 1 && uidmap.get(id).is_online) {
+					// Send uidmap to sensor
+					Transceiver sensor = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					SensorProto sensorproxy = SpecificRequestor.getClient(SensorProto.class, sensor);
+					response = sensorproxy.getLeader();
+					sensor.close();
+				} else if (uidmap.get(id).type == 3 && uidmap.get(id).is_online) {
+					// Send uidmap to light
+					Transceiver light = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					LightProto lightproxy = SpecificRequestor.getClient(LightProto.class, light);
+					response = lightproxy.getLeader();
+					light.close();
+				}
+			} catch (Exception e) {
+				continue;
+			}
+			if (response != "") break;
+		}
+		// Unpack response
+		if (response != "") {
+			JSONObject json;
+			try {
+				json = new JSONObject(response.toString());
+				lastServerID = json.getInt("lastServerID");
+			} catch (JSONException e) {
+				System.err.println("[Error] JSON exception");
+			}
+		}
 	}
 	
 	
@@ -385,7 +472,9 @@ public class User implements UserProto {
 	 ************************/
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		controller.updateController(jsonController);
+		if (this.lastServerID != this.ID) {
+			controller.updateController(jsonController);
+		}
 		return "";
 	}
 	
@@ -447,6 +536,11 @@ public class User implements UserProto {
 		myUser.connect_to_server();
 		myUser.runServer();
 		myUser.pullServer();
+		if (myUser.lastServerID == -2) {
+			// Ask leader ID
+			myUser.askLeaderID();
+		}
+		
 		
 		while (true) {
 
@@ -455,7 +549,7 @@ public class User implements UserProto {
 			 * 		Exit the system (disconnect from server)
 			 * 		Ask controller for list of all devices and other users
 			 * 		Ask controller for overview of the state of all the lights
-			 * 		Ask controller to switch specif@param argsic light to another state
+			 * 		Ask controller to switch specific light to another state
 			 * 		Ask controller for overview of inventory of a fridge
 			 * 		Ask controller to open a fridge 
 			 * 		Ask opened fridge to add/remove items.

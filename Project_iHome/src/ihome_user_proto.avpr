@@ -14,7 +14,7 @@
 			"response" : "string"
 		},
 		"receiveElected" : {
-			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}],
+			"request" : [{"name" : "serverIP", "type" : "string"}, {"name" : "port", "type" : "int"}, {"name":"serverID", "type":"int"}],
 			"response" : "string"
 		},
 		"ReceiveCoord" : {
@@ -28,6 +28,10 @@
 		"notify_user_leaves" : {
 			"request" : [{"name" : "uid", "type" : "int"}],
 			"response" : "int"
+		},
+		"getLeader" : {
+			"request" : [],
+			"response" : "string"
 		}
 	}
 }
