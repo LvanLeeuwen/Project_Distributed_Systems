@@ -2,6 +2,7 @@ package ihome.client;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.InputMismatchException;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Timer;
@@ -411,6 +412,10 @@ public class User implements UserProto {
 	public void connectToFridge(int fridgeid) 
 	{
 		CharSequence fridgeData = getPort(fridgeid);
+		if (fridgeData == "") {
+			System.out.println("No fridge connected with id " + fridgeid + "\n");
+			return;
+		}
 		int port = -1;
 		CharSequence ip = "0";
 		try {
@@ -438,22 +443,29 @@ public class User implements UserProto {
 				System.out.println("2) remove item from fridge(" + fridgeid+ ")");
 				System.out.println("3) Show current items in fridge");
 				System.out.println("4) Exit");
-				int in = reader.nextInt();
-				if(in == 1){		// Get list of all devices and users.
-					reader.nextLine(); // Consume newline left-over
-					System.out.println("What do you want to add to the fridge?");
-					String item = reader.nextLine();
-					fridgeproxy.add_item(item);
-				} else if(in == 2){
-					reader.nextLine(); // Consume newline left-over
-					System.out.println("What do you want to remove from the fridge?");
-					String item = reader.nextLine();
-					fridgeproxy.remove_item(item);
-				}else if(in == 3){	// Get overview of the state of all the lights.					
-					System.out.println(fridgeproxy.send_current_items());
-				} else if(in == 4){
-					break;
-				}	
+				try {
+					int in = reader.nextInt();
+					if(in == 1){		// Get list of all devices and users.
+						reader.nextLine(); // Consume newline left-over
+						System.out.println("What do you want to add to the fridge?");
+						String item = reader.nextLine();
+						fridgeproxy.add_item(item);
+					} else if(in == 2){
+						reader.nextLine(); // Consume newline left-over
+						System.out.println("What do you want to remove from the fridge?");
+						String item = reader.nextLine();
+						fridgeproxy.remove_item(item);
+					}else if(in == 3){	// Get overview of the state of all the lights.					
+						System.out.println(fridgeproxy.send_current_items());
+					} else if(in == 4){
+						break;
+					} else {
+						continue;
+					}
+				} catch (InputMismatchException e) {
+					System.out.println("Wrong input.");
+					reader.next();
+				}
 			}
 			proxy.release_fridge(fridgeid);
 				
@@ -464,7 +476,7 @@ public class User implements UserProto {
 				System.err.println("[Error] Failed to report fridge offline");
 			}
 			System.err.println("Fridge is offline");
-		}
+		} 
 	}
 	
 	@Override
@@ -545,7 +557,7 @@ public class User implements UserProto {
 				
 			} catch(Exception e){
 				if(json.get("Error") != null)
-					{System.out.println("No such fridge connected");}
+					{System.out.println("No fridge connected with id " + id + "\n");}
 				else{
 					throw e;
 				}
@@ -594,106 +606,126 @@ public class User implements UserProto {
 			 * 		Ask controller for history of temperature in the house.
 			 */
 			System.out.println("What do you want to do?");
-			System.out.println("1) Get list of all devices and users");
-			System.out.println("2) Get overview of the state of all the lights");
-			System.out.println("3) Switch light on/off");
-			System.out.println("4) Get contents fridge");
-			System.out.println("5) Get current temperature");
-			System.out.println("6) Get history of temperature");
-			System.out.println("7) Open fridge");
-			System.out.println("8) Leave house");
-			System.out.println("9) Enter house");
+			if (myUser.inHouse) {
+				System.out.println("1) Get list of all devices and users");
+				System.out.println("2) Get overview of the state of all the lights");
+				System.out.println("3) Switch light on/off");
+				System.out.println("4) Get contents fridge");
+				System.out.println("5) Get current temperature");
+				System.out.println("6) Get history of temperature");
+				System.out.println("7) Open fridge");
+				System.out.println("8) Leave house");
+			} else {
+				System.out.println("9) Enter house");
+			}
 
-			
-			int in = reader.nextInt();
-			if(in == 1){		// Get list of all devices and users.
-				try {
-					
-					
-					CharSequence devices = myUser.proxy.get_all_devices();
-					System.out.println(devices);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if(in ==2){	// Get overview of the state of all the lights.
-				try {
-					CharSequence result = myUser.proxy.get_lights_state();
-					System.out.println(result);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if(in ==3){	// Switch state light
-				// Lijst van actieve lichten. 
-				try {
-					CharSequence response = myUser.proxy.getActiveLights();
-					JSONObject json = new JSONObject(response.toString());
-					JSONArray arr = json.getJSONArray("lights");
-					if (arr.length() > 0) {
-						System.out.println("Possible light ID's:");
-						for (int i = 0; i < arr.length(); i++) {
-							System.out.println(arr.getInt(i));
-						}
-						System.out.println("Give id of light:");
-						int id = reader.nextInt();
-						CharSequence result = myUser.proxy.switch_state_light(id);
-						JSONObject jsonResult = new JSONObject(result.toString());
-						boolean switched = jsonResult.getBoolean("Switched");
-						if (!switched) {
-							String error = jsonResult.getString("Error");
-							System.out.println("Failed to switch light. An error occured: " + error + "\n");
-						}
-					} else {
-						System.out.println("There are no lights in the house.\n");
+			try {
+				int in = reader.nextInt();
+				if(in == 1 && myUser.inHouse){		// Get list of all devices and users.
+					try {
+						CharSequence devices = myUser.proxy.get_all_devices();
+						System.out.println(devices);
+					} catch (AvroRemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
 					}
-				} catch (Exception e) {
+				} else if(in ==2 && myUser.inHouse){	// Get overview of the state of all the lights.
+					try {
+						CharSequence result = myUser.proxy.get_lights_state();
+						if (result.toString() != "") {
+							System.out.println(result);
+						} else {
+							System.out.println("\nNo lights connected\n");
+						}
+					} catch (AvroRemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else if(in ==3 && myUser.inHouse){	// Switch state light
+					try {
+						CharSequence response = myUser.proxy.getIDdevice(3);
+						if (response.toString() != "") {
+							System.out.println("\nOnline lights: " + response);
+							System.out.println("Give id:");
+							int id = reader.nextInt();
+							CharSequence result = myUser.proxy.switch_state_light(id);
+							JSONObject jsonResult = new JSONObject(result.toString());
+							boolean switched = jsonResult.getBoolean("Switched");
+							if (!switched) {
+								String error = jsonResult.getString("Error");
+								System.out.println("Failed to switch light. An error occured: " + error + "\n");
+							}
+						} else {
+							System.out.println("There are no online lights.\n");
+						}
+					} catch (Exception e) {
+					}
+				} else if (in == 4 && myUser.inHouse) {	// Get contents fridge.			
+					try {
+						CharSequence response = myUser.proxy.getIDdevice(2);
+						if (response.toString() != "") {
+							System.out.println("\nOnline fridges: " + response);	
+							System.out.println("Give id:");
+							int id = reader.nextInt();
+							myUser.get_content_fridge( id);
+						} else {
+							System.out.println("\nThere are no online fridges.\n");
+						}
+					} catch (AvroRemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else if (in == 5 && myUser.inHouse) {	// Get current temperature.
+					try {
+						CharSequence result = myUser.proxy.get_temperature_current();
+						if (result.toString() != "") {
+							System.out.println(result);
+						} else {
+							System.out.println("\nNo temperature sensor connected. \n");
+						}
+					} catch (AvroRemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else if (in == 6 && myUser.inHouse) { // Get history of temperature
+					try {
+						CharSequence result = myUser.proxy.get_temperature_list();
+						System.out.println(result);
+					} catch (AvroRemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	
+				} else if(in == 7 && myUser.inHouse){
+					try {
+						CharSequence response = myUser.proxy.getIDdevice(2);
+						if (response.toString() != "") {
+							System.out.println("\nOnline fridges: " + response);	
+							System.out.println("Give id:");
+							int id = reader.nextInt();
+							myUser.connectToFridge(id);
+						} else {
+							System.out.println("There are no online fridges.\n");
+						}
+					} catch (AvroRemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else if (in == 8 && myUser.inHouse) {
+					myUser.leaveHouse();
+				} else if (in == 9 && !myUser.inHouse) {
+					myUser.enterHouse();
+				}else {
+					System.out.println("Wrong input.");
+					continue;
 				}
-			} else if (in == 4) {	// Get contents fridge.
-				
-				System.out.println("Give id:");
-				
-				try {
-					System.out.println("online fridges: " + myUser.proxy.getIDdevice(2).toString());	
-					int id = reader.nextInt();
-					myUser.get_content_fridge( id);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if (in == 5) {	// Get current temperature.
-				try {
-					CharSequence result = myUser.proxy.get_temperature_current();
-					System.out.println(result);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if (in == 6) { // Get history of temperature
-				try {
-					CharSequence result = myUser.proxy.get_temperature_list();
-					System.out.println(result);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-
-			} else if(in == 7){
-				System.out.println("Give id:");
-				int id = reader.nextInt();
-				myUser.connectToFridge(id);
-			} else if (in == 8) {
-				myUser.leaveHouse();
-			} else if (in == 9) {
-				myUser.enterHouse();
-			}else {
-			
-				break;
+			} catch (InputMismatchException e) {
+				System.out.println("Wrong input.");
+				reader.next();
 			}
 			
-			
 		}
-		reader.close();
+		//reader.close();
 	}
 }
 	
