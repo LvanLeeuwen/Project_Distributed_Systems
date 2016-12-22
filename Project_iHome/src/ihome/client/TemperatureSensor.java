@@ -49,7 +49,7 @@ public class TemperatureSensor implements SensorProto {
 	
 	// Election variables
 	private boolean participant = false;
-	private int lastServerID = -1;
+	private int elected = -1;
 	
 	// Controller variables
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
@@ -81,7 +81,7 @@ public class TemperatureSensor implements SensorProto {
 			} catch (Exception e) {
 				sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, sensor);
-				lastServerID = -2;
+				elected = -2;
 			}
 			
 			CharSequence response = proxy.connect(1, IPAddress);
@@ -198,7 +198,7 @@ public class TemperatureSensor implements SensorProto {
 	}
 	
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -224,7 +224,7 @@ public class TemperatureSensor implements SensorProto {
 	}
 	
 	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -269,7 +269,7 @@ public class TemperatureSensor implements SensorProto {
 			try {
 				sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.class, sensor);
-				this.lastServerID = serverID;
+				this.elected = serverID;
 				System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
@@ -294,7 +294,7 @@ public class TemperatureSensor implements SensorProto {
 		try {
 			sensor = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.class, sensor);
-			this.lastServerID = -1;
+			this.elected = -1;
 			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
@@ -306,7 +306,7 @@ public class TemperatureSensor implements SensorProto {
 	public CharSequence getLeader() throws AvroRemoteException {
 		try {
 			JSONObject json = new JSONObject();
-			json.put("lastServerID", lastServerID);
+			json.put("lastServerID", elected);
 			return json.toString();
 		} catch (JSONException e) {
 			return "";
@@ -351,7 +351,7 @@ public class TemperatureSensor implements SensorProto {
 			JSONObject json;
 			try {
 				json = new JSONObject(response.toString());
-				lastServerID = json.getInt("lastServerID");
+				elected = json.getInt("lastServerID");
 			} catch (JSONException e) {
 				System.err.println("[Error] JSON exception");
 			}
@@ -422,7 +422,7 @@ public class TemperatureSensor implements SensorProto {
 		mySensor.connect_to_server(initTemp);
 		mySensor.runServer();
 		mySensor.pullServer();
-		if (mySensor.lastServerID == -2) {
+		if (mySensor.elected == -2) {
 			// Ask leader ID
 			mySensor.askLeaderID();
 		}

@@ -51,7 +51,7 @@ public class Fridge implements FridgeProto {
 	// Leader election variables
 	private Boolean participant = false;
 	private Boolean isLeader = false;
-	private int lastServerID = -1;
+	private int elected = -1;
 	
 	
 	
@@ -77,7 +77,7 @@ public class Fridge implements FridgeProto {
 			} catch(Exception e) {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-				lastServerID = -2;
+				elected = -2;
 			}
 			
 			CharSequence response = proxy.connect(2, IPAddress);
@@ -146,7 +146,7 @@ public class Fridge implements FridgeProto {
 	 ** ELECTION **
 	 **************/
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
-		if(nextID == lastServerID){
+		if(nextID == elected){
 			return false;
 		}
 		try {
@@ -172,7 +172,7 @@ public class Fridge implements FridgeProto {
 	}
 	
 	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -212,7 +212,7 @@ public class Fridge implements FridgeProto {
 					try {
 						fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-						this.lastServerID = this.ID;
+						this.elected = this.ID;
 						this.server_ip_address = this.IPAddress;
 						System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 					} catch (IOException e) {
@@ -229,7 +229,7 @@ public class Fridge implements FridgeProto {
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);
-				this.lastServerID = this.ID;
+				this.elected = this.ID;
 				this.server_ip_address = this.IPAddress;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
@@ -270,7 +270,7 @@ public class Fridge implements FridgeProto {
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, fridge);	
-				this.lastServerID = this.ID;
+				this.elected = this.ID;
 				this.server_ip_address = this.IPAddress;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
@@ -294,7 +294,7 @@ public class Fridge implements FridgeProto {
 			try {
 				fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
-				this.lastServerID = serverID;
+				this.elected = serverID;
 				System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
@@ -319,7 +319,7 @@ public class Fridge implements FridgeProto {
 		try {
 			fridge = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, fridge);
-			this.lastServerID = -1;
+			this.elected = -1;
 			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
@@ -333,7 +333,7 @@ public class Fridge implements FridgeProto {
 	public CharSequence getLeader() throws AvroRemoteException {
 		try {
 			JSONObject json = new JSONObject();
-			json.put("lastServerID", lastServerID);
+			json.put("lastServerID", elected);
 			return json.toString();
 		} catch (JSONException e) {
 			return "";
@@ -379,7 +379,7 @@ public class Fridge implements FridgeProto {
 			JSONObject json;
 			try {
 				json = new JSONObject(response.toString());
-				lastServerID = json.getInt("lastServerID");
+				elected = json.getInt("lastServerID");
 			} catch (JSONException e) {
 				System.err.println("[Error] JSON exception");
 			}
@@ -447,7 +447,7 @@ public class Fridge implements FridgeProto {
 	
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		if (this.lastServerID != this.ID) {
+		if (this.elected != this.ID) {
 			return controller.updateController(jsonController);
 		}
 		return " ";
@@ -468,7 +468,7 @@ public class Fridge implements FridgeProto {
 		myFridge.connect_to_server();
 		myFridge.runServer();
 		myFridge.pullServer();
-		if (myFridge.lastServerID == -2) {
+		if (myFridge.elected == -2) {
 			// Ask leader ID
 			myFridge.askLeaderID();
 		}

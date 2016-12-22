@@ -585,6 +585,8 @@ public class Controller implements ServerProto
 					trans.close();
 				}
 			}
+			if(lights == "")
+				lights = "There are no lights conected\n";
 			return lights;
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to get lights state");
@@ -979,5 +981,14 @@ public class Controller implements ServerProto
 		//controller.get_light_state(0);
 		controller.stopServer();
 	}	
+	}
+	@Override
+	public CharSequence getIDdevice(int devicetype) throws AvroRemoteException {
+		String out = "";
+		for(int id : this.uidmap.keySet()){
+			if(this.uidmap.get(id).is_online && this.uidmap.get(id).type == devicetype)
+				out += Integer.toString(id) + " ";
+		}
+		return out;
 	}
 }
