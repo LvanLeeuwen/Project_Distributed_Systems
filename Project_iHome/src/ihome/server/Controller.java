@@ -570,6 +570,22 @@ public class Controller implements ServerProto
 	 *************************/
 	
 	@Override
+	public CharSequence getActiveLights() throws AvroRemoteException {
+		JSONObject json = new JSONObject();
+		JSONArray arr = new JSONArray();
+		for (int id : this.uidmap.keySet()) {
+			if (this.uidmap.get(id).type == 3 && this.uidmap.get(id).is_online) {
+				arr.put(id);
+			}
+		}
+		try {
+			json.put("lights", arr);
+		} catch (JSONException e) {
+		}
+		return json.toString();
+	}
+	
+	@Override
 	public CharSequence get_lights_state() throws AvroRemoteException {
 		try {
 			CharSequence lights = "";
@@ -577,7 +593,7 @@ public class Controller implements ServerProto
 				Integer key = entry.getKey();
 				Device device = entry.getValue();
 				String ip = uidmap.get(key).IPAddress.toString();
-				if (device.type == 3) {
+				if (device.type == 3 && device.is_online) {
 					Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+key));
 					LightProto proxy = SpecificRequestor.getClient(LightProto.class, trans);
 					CharSequence state = proxy.send_state();
@@ -590,7 +606,6 @@ public class Controller implements ServerProto
 			return lights;
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to get lights state");
-			
 		}
 		return " ";
 	}
@@ -756,7 +771,7 @@ public class Controller implements ServerProto
 		
 		if(this.uidmap.get(fridgeid).type == 2){
 			this.uidmap.get(fridgeid).has_local_connect = uid;
-			return "{\"socket\" : " + (fridgeid + 6790) + "}";
+			return "{\"socket\" : " + (fridgeid + 6790) + ", \"IPAddress\" : \"" + this.uidmap.get(fridgeid).IPAddress + "\"}";
 		}
 		else{
 			return "{\"socket\" : NULL}";

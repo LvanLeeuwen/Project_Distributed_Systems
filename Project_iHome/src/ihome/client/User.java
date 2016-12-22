@@ -387,12 +387,12 @@ public class User implements UserProto {
 	 ** FRIDGE CONNECT **
 	 ********************/
 	
-	private int getPort(int uid){
+	private CharSequence getPort(int uid){
 		try {
 			CharSequence response = proxy.get_fridge_port(this.ID, uid);
 			JSONObject json = new JSONObject(response.toString());
 			if (!json.isNull("socket"))
-				return json.getInt("socket");
+				return response;
 			else{
 				try{
 					System.out.println("[Error] " + json.getString("Error"));
@@ -400,17 +400,26 @@ public class User implements UserProto {
 				catch(Exception e){
 					
 				}
-				return -1;
+				return "";
 			}
 		} catch (AvroRemoteException | JSONException e) {
 			System.err.println("[Error] Failed to get port");
 		}
-		return -1;
+		return "";
 	}
 	
 	public void connectToFridge(int fridgeid) 
 	{
-		int port = getPort(fridgeid);
+		CharSequence fridgeData = getPort(fridgeid);
+		int port = -1;
+		CharSequence ip = "0";
+		try {
+			JSONObject json = new JSONObject(fridgeData.toString());
+			port = json.getInt("socket");
+			ip = json.getString("IPAddress");
+		} catch (JSONException e) {
+			System.err.println("[Error] JSON error");
+		}
 		
 		if(port == -1)
 		{
@@ -419,8 +428,7 @@ public class User implements UserProto {
 		}
 		
 		try {
-			String ip = this.controller.getIP(fridgeid).toString();
-			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(ip, port));
+			Transceiver fridge = new SaslSocketTransceiver(new InetSocketAddress(ip.toString(), port));
 			FridgeProto fridgeproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, fridge);
 			
 			Scanner reader = new Scanner(System.in);
@@ -617,14 +625,29 @@ public class User implements UserProto {
 					e.printStackTrace();
 				}
 			} else if(in ==3){	// Switch state light
-				System.out.println("Give id of light:");
-				int id = reader.nextInt();
+				// Lijst van actieve lichten. 
 				try {
-					CharSequence result = myUser.proxy.switch_state_light(id);
-					System.out.println(result);
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					CharSequence response = myUser.proxy.getActiveLights();
+					JSONObject json = new JSONObject(response.toString());
+					JSONArray arr = json.getJSONArray("lights");
+					if (arr.length() > 0) {
+						System.out.println("Possible light ID's:");
+						for (int i = 0; i < arr.length(); i++) {
+							System.out.println(arr.getInt(i));
+						}
+						System.out.println("Give id of light:");
+						int id = reader.nextInt();
+						CharSequence result = myUser.proxy.switch_state_light(id);
+						JSONObject jsonResult = new JSONObject(result.toString());
+						boolean switched = jsonResult.getBoolean("Switched");
+						if (!switched) {
+							String error = jsonResult.getString("Error");
+							System.out.println("Failed to switch light. An error occured: " + error + "\n");
+						}
+					} else {
+						System.out.println("There are no lights in the house.\n");
+					}
+				} catch (Exception e) {
 				}
 			} else if (in == 4) {	// Get contents fridge.
 				

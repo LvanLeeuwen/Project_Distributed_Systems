@@ -85,6 +85,11 @@
 		"getIDdevice" : {
 			"request" : [{"name" : "devicetype", "type" : "int"}],
 			"response" : "string"
+		},
+		"getActiveLights" : {
+			"request" : [],
+
+			"response" : "string"
 		}
 	}
 }
