@@ -47,7 +47,7 @@ public class User implements UserProto {
 	//leader election variables
 	private Boolean participant = false;
 	private Boolean isLeader = false;
-	private int lastServerID = -1;
+	private int elected = -1;
 	
 	/******************
 	 ** CONSTRUCTORS **
@@ -71,7 +71,7 @@ public class User implements UserProto {
 			} catch (Exception e) {
 				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
-				lastServerID = -2;
+				elected = -2;
 			}
 			
 			CharSequence response = proxy.connect(0, IPAddress);
@@ -141,7 +141,7 @@ public class User implements UserProto {
 	 ** ELECTION FUNCTIONALITY **
 	 ****************************/
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -167,7 +167,7 @@ public class User implements UserProto {
 	}
 	
 	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -207,7 +207,7 @@ public class User implements UserProto {
 					try {
 						user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 						proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);
-						this.lastServerID = this.ID;
+						this.elected = this.ID;
 						this.server_ip_address = this.IPAddress;
 						System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 					} catch (IOException e) {
@@ -224,7 +224,7 @@ public class User implements UserProto {
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);	
-				this.lastServerID = this.ID;
+				this.elected = this.ID;
 				this.server_ip_address = this.IPAddress;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
@@ -265,7 +265,7 @@ public class User implements UserProto {
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(IPAddress, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, user);			
-				this.lastServerID = this.ID;
+				this.elected = this.ID;
 				this.server_ip_address = this.IPAddress;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
@@ -290,7 +290,7 @@ public class User implements UserProto {
 			try {
 				user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
-				this.lastServerID = serverID;
+				this.elected = serverID;
 				System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
@@ -315,7 +315,7 @@ public class User implements UserProto {
 		try {
 			user = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, user);
-			this.lastServerID = -1;
+			this.elected = -1;
 			System.out.println("\nA new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			System.err.println("[Error] Failed to start server");
@@ -329,7 +329,7 @@ public class User implements UserProto {
 	public CharSequence getLeader() throws AvroRemoteException {
 		try {
 			JSONObject json = new JSONObject();
-			json.put("lastServerID", lastServerID);
+			json.put("lastServerID", elected);
 			return json.toString();
 		} catch (JSONException e) {
 			return "";
@@ -375,7 +375,7 @@ public class User implements UserProto {
 			JSONObject json;
 			try {
 				json = new JSONObject(response.toString());
-				lastServerID = json.getInt("lastServerID");
+				elected = json.getInt("lastServerID");
 			} catch (JSONException e) {
 				System.err.println("[Error] JSON exception");
 			}
@@ -471,7 +471,7 @@ public class User implements UserProto {
 	 ************************/
 	@Override
 	public CharSequence update_controller(CharSequence jsonController) throws AvroRemoteException {
-		if (this.lastServerID != this.ID) {
+		if (this.elected != this.ID) {
 			controller.updateController(jsonController);
 		}
 		return "";
@@ -521,6 +521,35 @@ public class User implements UserProto {
 	}
 	
 	
+	public void get_content_fridge(int id){
+		System.out.println("Give id:");
+		
+		try {
+			
+			CharSequence result = this.proxy.get_fridge_contents(id);
+			JSONObject json = new JSONObject(result.toString());
+			
+			try{
+				if(json.get("Contents") == JSONObject.NULL)
+					throw new Exception();
+				
+				System.out.println(json.get("Contents").toString());
+				
+			} catch(Exception e){
+				if(json.get("Error") != null)
+					{System.out.println("No such fridge connected");}
+				else{
+					throw e;
+				}
+				
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	
 	/**********
 	 ** MAIN **
 	 **********/
@@ -535,7 +564,7 @@ public class User implements UserProto {
 		myUser.connect_to_server();
 		myUser.runServer();
 		myUser.pullServer();
-		if (myUser.lastServerID == -2) {
+		if (myUser.elected == -2) {
 			// Ask leader ID
 			myUser.askLeaderID();
 		}
@@ -598,11 +627,13 @@ public class User implements UserProto {
 					e.printStackTrace();
 				}
 			} else if (in == 4) {	// Get contents fridge.
+				
 				System.out.println("Give id:");
-				int id = reader.nextInt();
+				
 				try {
-					CharSequence result = myUser.proxy.get_fridge_contents(id);
-					System.out.println(result);
+					System.out.println("online fridges: " + myUser.proxy.getIDdevice(2).toString());	
+					int id = reader.nextInt();
+					myUser.get_content_fridge( id);
 				} catch (AvroRemoteException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

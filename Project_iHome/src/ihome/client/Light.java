@@ -44,7 +44,7 @@ public class Light implements LightProto {
 	
 	// Election variables
 	private boolean participant = false;
-	private int lastServerID = -1;
+	private int elected = -1;
 	
 	// Controller variables
 	private Map<Integer, Device> uidmap = new HashMap<Integer, Device>();
@@ -76,7 +76,7 @@ public class Light implements LightProto {
 			} catch (Exception e) {
 				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, 6788));
 				proxy = (ServerProto) SpecificRequestor.getClient(ServerProto.class, light);
-				lastServerID = -2;
+				elected = -2;
 			}
 			
 			CharSequence response = proxy.connect(3, IPAddress);
@@ -188,7 +188,7 @@ public class Light implements LightProto {
 	}
 	
 	public boolean sendElection(int nextID, CharSequence ipaddress, int receivedID) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -214,7 +214,7 @@ public class Light implements LightProto {
 	}
 	
 	public boolean sendElected(int nextID, CharSequence ipaddress, CharSequence serverIP, int port, int sid) {
-		if(nextID == this.lastServerID){
+		if(nextID == this.elected){
 			return false;
 		}
 		try {
@@ -259,7 +259,7 @@ public class Light implements LightProto {
 			try {
 				light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 				proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
-				this.lastServerID = serverID;
+				this.elected = serverID;
 				System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to start server");
@@ -284,7 +284,7 @@ public class Light implements LightProto {
 		try {
 			light = new SaslSocketTransceiver(new InetSocketAddress(server_ip_address, port));
 			proxy = SpecificRequestor.getClient(ServerProto.Callback.class, light);
-			this.lastServerID = -1;
+			this.elected = -1;
 			System.out.println("A new controller has been selected with IP address " + this.server_ip_address);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -297,7 +297,7 @@ public class Light implements LightProto {
 	public CharSequence getLeader() throws AvroRemoteException {
 		try {
 			JSONObject json = new JSONObject();
-			json.put("lastServerID", lastServerID);
+			json.put("lastServerID", elected);
 			return json.toString();
 		} catch (JSONException e) {
 			return "";
@@ -342,7 +342,7 @@ public class Light implements LightProto {
 			JSONObject json;
 			try {
 				json = new JSONObject(response.toString());
-				lastServerID = json.getInt("lastServerID");
+				elected = json.getInt("lastServerID");
 			} catch (JSONException e) {
 				System.err.println("[Error] JSON exception");
 			}
@@ -414,7 +414,7 @@ public class Light implements LightProto {
 		myLight.connect_to_server();
 		myLight.runServer();
 		myLight.pullServer();
-		if (myLight.lastServerID == -2) {
+		if (myLight.elected == -2) {
 			// Ask leader ID
 			myLight.askLeaderID();
 		}

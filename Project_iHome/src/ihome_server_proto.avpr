@@ -81,6 +81,10 @@
 		"sendCoord" : {
 			"request" : [],
 			"response" : "string"
+		},
+		"getIDdevice" : {
+			"request" : [{"name" : "devicetype", "type" : "int"}],
+			"response" : "string"
 		}
 	}
 }
