@@ -471,38 +471,9 @@ public class Fridge implements FridgeProto {
 			myFridge.askLeaderID();
 		}
 		
-		while (true) {
-			// execute actions from command line
-			/*
-			 * Possible actions:
-			 * 		Print a list of items stored in the fridge.
-			 * 		Return a list of all items stored in the fridge.
-			 * 		Add or remove an item to or from the fridge.
-			 */
-			
-			
-			System.out.println("What do you want to do?");
-			System.out.println("1) Get my controllers devices");
-			System.out.println("2) Show contents");
-			
-			int in = reader.nextInt();
-			if(in == 1){
-				try {
-					System.out.println(myFridge.controller.get_all_devices());
-				} catch (AvroRemoteException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else if (in == 2) {
-				try {
-					System.out.println(myFridge.send_current_items());
-				} catch (AvroRemoteException e) {
-					e.printStackTrace();
-				}
-			} else {
-				break;
-			}
-		}
 		reader.close();
+		while (true) {
+			continue;
+		}
 	}
 }
