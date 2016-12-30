@@ -413,13 +413,11 @@ public class Fridge implements FridgeProto {
 	
 	@Override
 	public CharSequence add_item(CharSequence item) throws AvroRemoteException {
-		
-		
 		if (items.contains(item)) {
 			item = item +  "0";
 		}
 		items.add(item);
-		return "test";
+		return "";
 	}
 
 	@Override
@@ -427,7 +425,7 @@ public class Fridge implements FridgeProto {
 		this.items.remove(item);
 		if(this.items.isEmpty())
 		proxy.notify_empty_fridge(this.ID);
-		return "test";
+		return "";
 	}
 	
 	@Override
@@ -496,7 +494,6 @@ public class Fridge implements FridgeProto {
 					e.printStackTrace();
 				}
 			} else if (in == 2) {
-				myFridge.print_items();
 				try {
 					System.out.println(myFridge.send_current_items());
 				} catch (AvroRemoteException e) {

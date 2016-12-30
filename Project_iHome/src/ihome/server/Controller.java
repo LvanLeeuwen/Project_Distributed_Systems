@@ -80,10 +80,13 @@ public class Controller implements ServerProto
 		
 		try{
 			uidmap.put(nextID, new Device(device_type, ip_address));
-			if(device_type == 1)
+			if(device_type == 1) {
 				sensormap.put(nextID, new ArrayList<Float>());
-			else if(device_type == 0){
+				fridgeAlive.put(nextID, true);
+			} else if(device_type == 0){
 				uidalive.put(nextID, true);
+			} else {
+				fridgeAlive.put(nextID, true);
 			}
 			System.out.println("Device connected with id " + nextID);
 			this.sendController(nextID);
@@ -163,23 +166,26 @@ public class Controller implements ServerProto
 	public CharSequence sendCoord() throws AvroRemoteException {
 		for (int key : uidmap.keySet()) {
 			try {
-				Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(uidmap.get(key).IPAddress.toString(), 6790 + key));
-				if (uidmap.get(key).type == 0 && uidmap.get(key).is_online) {
-					UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, trans);
-					uproxy.ReceiveCoord(this.IPAddress, 6789);
-				} else if (uidmap.get(key).type == 1 && uidmap.get(key).is_online) {
-					SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, trans);
-					sproxy.ReceiveCoord(this.IPAddress, 6789);
-				} else if (uidmap.get(key).type == 2 && uidmap.get(key).is_online) {
-					FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, trans);
-					fproxy.ReceiveCoord(this.IPAddress, 6789);
-				} else if (uidmap.get(key).type == 3 && uidmap.get(key).is_online) {
-					LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, trans);
-					lproxy.ReceiveCoord(this.IPAddress, 6789);
+				if (uidmap.get(key).is_online) {
+					Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(uidmap.get(key).IPAddress.toString(), 6790 + key));
+					if (uidmap.get(key).type == 0 && uidmap.get(key).is_online) {
+						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, trans);
+						uproxy.ReceiveCoord(this.IPAddress, 6789);
+					} else if (uidmap.get(key).type == 1 && uidmap.get(key).is_online) {
+						SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, trans);
+						sproxy.ReceiveCoord(this.IPAddress, 6789);
+					} else if (uidmap.get(key).type == 2 && uidmap.get(key).is_online) {
+						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, trans);
+						fproxy.ReceiveCoord(this.IPAddress, 6789);
+					} else if (uidmap.get(key).type == 3 && uidmap.get(key).is_online) {
+						LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, trans);
+						lproxy.ReceiveCoord(this.IPAddress, 6789);
+					}
+					trans.close();
 				}
-				trans.close();
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to send coordinates");
+				e.printStackTrace();
 			}
 		}
 		return "";
@@ -251,7 +257,6 @@ public class Controller implements ServerProto
 			}
 		} catch (Exception e) {
 			System.err.println("[Error] Failed to send controller");
-			e.printStackTrace();
 			return 0;
 		}
 		return 0;
@@ -324,9 +329,7 @@ public class Controller implements ServerProto
 				}
 			}
 		} catch (Exception e) {
-			System.err.println("Not to own id");
 			System.err.println("[Error] Failed to send controller");
-			e.printStackTrace();
 			return;
 		}
 		return;
@@ -624,7 +627,7 @@ public class Controller implements ServerProto
 					lightproxy.turn_off();
 					trans.close();
 				} catch (IOException e) {
-					System.err.println("[Error] Failed to turn of lights");
+					System.err.println("[Error] Failed to turn off lights");
 				}
 			}
 		}
@@ -652,6 +655,8 @@ public class Controller implements ServerProto
 		Device light = uidmap.get(uid);
 		if (light == null || light.type != 3) {
 			return "{\"Switched\" : false, \"Error\" : \"[Error] light_id not found in current session.\"}";
+		} else if (!light.is_online) {
+			return "{\"Switched\" : false, \"Error\" : \"[Error] Light is offline.\"}";
 		}
 		try {
 			String ip = uidmap.get(uid).IPAddress.toString();
@@ -692,7 +697,7 @@ public class Controller implements ServerProto
 			if(this.uidmap.get(i).is_online)
 				nr_users++;
 		}
-		// Check alive fridges
+		// Check alive fridges and others
 		for (int i : this.fridgeAlive.keySet()) {
 			this.uidmap.get(i).is_online = this.fridgeAlive.get(i);
 			this.fridgeAlive.put(i, false);
@@ -727,6 +732,8 @@ public class Controller implements ServerProto
 		Device fridge = uidmap.get(uid);
 		if (fridge == null || fridge.type != 2) {
 			return "{\"Contents\" : NULL, \"Error\" : \"[Error] fridge_id not found in current session.\"}";
+		} else if (!fridge.is_online) {
+			return "{\"Contents\" : NULL, \"Error\" : \"[Error] Fridge is offline.\"}";
 		}
 		try {
 			String ip = fridge.IPAddress.toString();
@@ -801,8 +808,8 @@ public class Controller implements ServerProto
 			if(this.uidmap.get(uid).type == 2){
 				for (int id : uidmap.keySet()) {
 					int type = uidmap.get(id).type;
-					String ip = uidmap.get(uid).IPAddress.toString();
-					if (type == 0) {
+					String ip = uidmap.get(id).IPAddress.toString();
+					if (type == 0 && this.uidmap.get(id).is_online) {
 						// Send me to user
 						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+id));
 						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
@@ -813,7 +820,7 @@ public class Controller implements ServerProto
 			}
 				
 		}catch(Exception e){
-			
+			System.err.println("[Error] Failed to notify empty fridge");
 		}
 		return 0;
 	}
@@ -880,7 +887,8 @@ public class Controller implements ServerProto
 			// Send message to all other users
 			for (int id : uidmap.keySet()) {
 				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
-					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					String ip = uidmap.get(id).IPAddress.toString();
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					int response = userproxy.notify_user_enters(uid);
 					user.close();
@@ -905,7 +913,8 @@ public class Controller implements ServerProto
 			// Send message to all other users
 			for (int id : uidmap.keySet()) {
 				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
-					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					String ip = uidmap.get(id).IPAddress.toString();
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					int response = userproxy.notify_user_leaves(uid);
 					user.close();
@@ -1020,7 +1029,12 @@ public class Controller implements ServerProto
 							e.printStackTrace();
 						}
 					} else if (in == 6) {	// Temp list
-						System.out.println(controller.sensormap.toString());
+						try {
+							System.out.println(controller.get_temperature_list());
+						} catch (AvroRemoteException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					} else {
 						System.out.println("Wrong input.");
 						continue;
