@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.InputMismatchException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -79,10 +80,13 @@ public class Controller implements ServerProto
 		
 		try{
 			uidmap.put(nextID, new Device(device_type, ip_address));
-			if(device_type == 1)
+			if(device_type == 1) {
 				sensormap.put(nextID, new ArrayList<Float>());
-			else if(device_type == 0){
+				fridgeAlive.put(nextID, true);
+			} else if(device_type == 0){
 				uidalive.put(nextID, true);
+			} else {
+				fridgeAlive.put(nextID, true);
 			}
 			System.out.println("Device connected with id " + nextID);
 			this.sendController(nextID);
@@ -162,23 +166,26 @@ public class Controller implements ServerProto
 	public CharSequence sendCoord() throws AvroRemoteException {
 		for (int key : uidmap.keySet()) {
 			try {
-				Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(uidmap.get(key).IPAddress.toString(), 6790 + key));
-				if (uidmap.get(key).type == 0 && uidmap.get(key).is_online) {
-					UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, trans);
-					uproxy.ReceiveCoord(this.IPAddress, 6789);
-				} else if (uidmap.get(key).type == 1 && uidmap.get(key).is_online) {
-					SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, trans);
-					sproxy.ReceiveCoord(this.IPAddress, 6789);
-				} else if (uidmap.get(key).type == 2 && uidmap.get(key).is_online) {
-					FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, trans);
-					fproxy.ReceiveCoord(this.IPAddress, 6789);
-				} else if (uidmap.get(key).type == 3 && uidmap.get(key).is_online) {
-					LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, trans);
-					lproxy.ReceiveCoord(this.IPAddress, 6789);
+				if (uidmap.get(key).is_online) {
+					Transceiver trans = new SaslSocketTransceiver(new InetSocketAddress(uidmap.get(key).IPAddress.toString(), 6790 + key));
+					if (uidmap.get(key).type == 0 && uidmap.get(key).is_online) {
+						UserProto uproxy = (UserProto) SpecificRequestor.getClient(UserProto.class, trans);
+						uproxy.ReceiveCoord(this.IPAddress, 6789);
+					} else if (uidmap.get(key).type == 1 && uidmap.get(key).is_online) {
+						SensorProto sproxy = (SensorProto) SpecificRequestor.getClient(SensorProto.class, trans);
+						sproxy.ReceiveCoord(this.IPAddress, 6789);
+					} else if (uidmap.get(key).type == 2 && uidmap.get(key).is_online) {
+						FridgeProto fproxy = (FridgeProto) SpecificRequestor.getClient(FridgeProto.class, trans);
+						fproxy.ReceiveCoord(this.IPAddress, 6789);
+					} else if (uidmap.get(key).type == 3 && uidmap.get(key).is_online) {
+						LightProto lproxy = (LightProto) SpecificRequestor.getClient(LightProto.class, trans);
+						lproxy.ReceiveCoord(this.IPAddress, 6789);
+					}
+					trans.close();
 				}
-				trans.close();
 			} catch (IOException e) {
 				System.err.println("[Error] Failed to send coordinates");
+				e.printStackTrace();
 			}
 		}
 		return "";
@@ -250,7 +257,6 @@ public class Controller implements ServerProto
 			}
 		} catch (Exception e) {
 			System.err.println("[Error] Failed to send controller");
-			e.printStackTrace();
 			return 0;
 		}
 		return 0;
@@ -323,9 +329,7 @@ public class Controller implements ServerProto
 				}
 			}
 		} catch (Exception e) {
-			System.err.println("Not to own id");
 			System.err.println("[Error] Failed to send controller");
-			e.printStackTrace();
 			return;
 		}
 		return;
@@ -623,7 +627,7 @@ public class Controller implements ServerProto
 					lightproxy.turn_off();
 					trans.close();
 				} catch (IOException e) {
-					System.err.println("[Error] Failed to turn of lights");
+					System.err.println("[Error] Failed to turn off lights");
 				}
 			}
 		}
@@ -651,6 +655,8 @@ public class Controller implements ServerProto
 		Device light = uidmap.get(uid);
 		if (light == null || light.type != 3) {
 			return "{\"Switched\" : false, \"Error\" : \"[Error] light_id not found in current session.\"}";
+		} else if (!light.is_online) {
+			return "{\"Switched\" : false, \"Error\" : \"[Error] Light is offline.\"}";
 		}
 		try {
 			String ip = uidmap.get(uid).IPAddress.toString();
@@ -691,7 +697,7 @@ public class Controller implements ServerProto
 			if(this.uidmap.get(i).is_online)
 				nr_users++;
 		}
-		// Check alive fridges
+		// Check alive fridges and others
 		for (int i : this.fridgeAlive.keySet()) {
 			this.uidmap.get(i).is_online = this.fridgeAlive.get(i);
 			this.fridgeAlive.put(i, false);
@@ -726,6 +732,8 @@ public class Controller implements ServerProto
 		Device fridge = uidmap.get(uid);
 		if (fridge == null || fridge.type != 2) {
 			return "{\"Contents\" : NULL, \"Error\" : \"[Error] fridge_id not found in current session.\"}";
+		} else if (!fridge.is_online) {
+			return "{\"Contents\" : NULL, \"Error\" : \"[Error] Fridge is offline.\"}";
 		}
 		try {
 			String ip = fridge.IPAddress.toString();
@@ -800,8 +808,8 @@ public class Controller implements ServerProto
 			if(this.uidmap.get(uid).type == 2){
 				for (int id : uidmap.keySet()) {
 					int type = uidmap.get(id).type;
-					String ip = uidmap.get(uid).IPAddress.toString();
-					if (type == 0) {
+					String ip = uidmap.get(id).IPAddress.toString();
+					if (type == 0 && this.uidmap.get(id).is_online) {
 						// Send me to user
 						Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+id));
 						UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
@@ -812,7 +820,7 @@ public class Controller implements ServerProto
 			}
 				
 		}catch(Exception e){
-			
+			System.err.println("[Error] Failed to notify empty fridge");
 		}
 		return 0;
 	}
@@ -879,7 +887,8 @@ public class Controller implements ServerProto
 			// Send message to all other users
 			for (int id : uidmap.keySet()) {
 				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
-					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					String ip = uidmap.get(id).IPAddress.toString();
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					int response = userproxy.notify_user_enters(uid);
 					user.close();
@@ -904,7 +913,8 @@ public class Controller implements ServerProto
 			// Send message to all other users
 			for (int id : uidmap.keySet()) {
 				if (id != uid && uidmap.get(id).type == 0 && uidmap.get(id).is_online) {
-					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(6790+id));
+					String ip = uidmap.get(id).IPAddress.toString();
+					Transceiver user = new SaslSocketTransceiver(new InetSocketAddress(ip, 6790+id));
 					UserProto userproxy = SpecificRequestor.getClient(UserProto.class, user);
 					int response = userproxy.notify_user_leaves(uid);
 					user.close();
@@ -943,70 +953,99 @@ public class Controller implements ServerProto
 				System.out.println("2) Get state light");
 				System.out.println("3) Switch state light");
 				System.out.println("4) Get contents fridge");
-				System.out.println("5) Get current en removed contents fridge");
+				System.out.println("5) Get current temperature");
 				System.out.println("6) Get temperature list");
-				System.out.println("7) Get current temperature");
-				
-		//		System.out.println("8) send controller");
-				
-				int in = reader.nextInt();
-				if(in == 1){
 					
-					controller.printInSession();
-				} else if(in ==2){
-					try {
-						System.out.println(controller.get_lights_state());
-					} catch (AvroRemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+				try {
+					int in = reader.nextInt();
+					if(in == 1){
+						controller.printInSession();
+					} else if(in ==2){	// State light
+						try {
+							CharSequence result = controller.get_lights_state();
+							if (result.toString() != "") {
+								System.out.println(result);
+							} else {
+								System.out.println("\nNo lights connected\n");
+							}
+						} catch (AvroRemoteException e) {
+							e.printStackTrace();
+						}
+					} else if(in ==3){	// Switch light
+						try {
+							CharSequence response = controller.getIDdevice(3);
+							if (response.toString() != "") {
+								System.out.println("\nOnline lights: " + response);
+								System.out.println("Give id:");
+								int id = reader.nextInt();
+								CharSequence result = controller.switch_state_light(id);
+								JSONObject jsonResult = new JSONObject(result.toString());
+								boolean switched = jsonResult.getBoolean("Switched");
+								if (!switched) {
+									String error = jsonResult.getString("Error");
+									System.out.println("Failed to switch light. An error occured: " + error + "\n");
+								}
+							} else {
+								System.out.println("There are no online lights.\n");
+							}
+						} catch (Exception e) {
+						}
+					} else if (in == 4) {	// Get contents fridge
+						try {
+							CharSequence response = controller.getIDdevice(2);
+							if (response.toString() != "") {
+								System.out.println("\nOnline fridges: " + response);	
+								System.out.println("Give id:");
+								int id = reader.nextInt();
+								CharSequence result = controller.get_fridge_contents(id);
+								JSONObject json = new JSONObject(result.toString());
+								try {
+									if (json.get("Contents") == JSONObject.NULL) 
+										throw new Exception();
+									System.out.println(json.get("Contents").toString());
+								} catch (Exception e) {
+									if (json.get("Error") != null) {
+										System.out.println("No fridge connected with id " + id + "\n");
+									} else {
+										e.printStackTrace();;
+									}
+								}
+							} else {
+								System.out.println("\nThere are no online fridges.\n");
+							}
+						} catch (Exception e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					} else if (in == 5) {	// current temperature
+						try {
+							CharSequence result = controller.get_temperature_current();
+							if (result.toString() != "") {
+								System.out.println(result);
+							} else {
+								System.out.println("\nNo temperature sensor connected.\n");
+							}
+						} catch (AvroRemoteException e) {
+							e.printStackTrace();
+						}
+					} else if (in == 6) {	// Temp list
+						try {
+							System.out.println(controller.get_temperature_list());
+						} catch (AvroRemoteException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					} else {
+						System.out.println("Wrong input.");
+						continue;
 					}
-				} else if(in ==3){
-					System.out.println("Give id:");
-					int id = reader.nextInt();
-					try {
-						controller.switch_state_light(id);
-					} catch (AvroRemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} else if (in == 4) {
-					System.out.println("Give id:");
-					int id = reader.nextInt();
-					try {
-						controller.get_fridge_contents(id);
-					} catch (AvroRemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} else if (in == 5) {
-					System.out.println("Give id:");
-					int id = reader.nextInt();
-					controller.get_all_fridge_contents(id);
-				} else if (in == 6) {
-					System.out.println(controller.sensormap.toString());
-				} else if (in == 7) {
-					try {
-						System.out.println(controller.get_temperature_current());
-					} catch (AvroRemoteException e) {
-						e.printStackTrace();
-					}
-				} else if (in == 8) {
-					try {
-						controller.sendController();
-					} catch (AvroRemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} else if(in == 9){
-					controller.turn_of_lights();
-					
-				} else {
-					break;
+				} catch (InputMismatchException e) {
+					System.out.println("Wrong input.");
+					reader.next();
 				}
 			}
-			reader.close();
 			//controller.get_light_state(0);
-			controller.stopServer();
+			//controller.stopServer();
 		}	
 	}
 }

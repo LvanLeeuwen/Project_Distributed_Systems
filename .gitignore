@@ -1,5 +1,9 @@
 *.class
 *.txt
+*.aux
+*.log
+*.out
+*.synctex.gz
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/

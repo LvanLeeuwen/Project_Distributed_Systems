@@ -452,6 +452,8 @@ public class User implements UserProto {
 						fridgeproxy.add_item(item);
 					} else if(in == 2){
 						reader.nextLine(); // Consume newline left-over
+						System.out.println("Current items in fridge:");
+						System.out.println(fridgeproxy.send_current_items());
 						System.out.println("What do you want to remove from the fridge?");
 						String item = reader.nextLine();
 						fridgeproxy.remove_item(item);
@@ -542,8 +544,6 @@ public class User implements UserProto {
 	
 	
 	public void get_content_fridge(int id){
-		System.out.println("Give id:");
-		
 		try {
 			
 			CharSequence result = this.proxy.get_fridge_contents(id);
@@ -557,15 +557,14 @@ public class User implements UserProto {
 				
 			} catch(Exception e){
 				if(json.get("Error") != null)
-					{System.out.println("No fridge connected with id " + id + "\n");}
+					{System.out.println("An error occurred: " + json.get("Error"));}
 				else{
 					throw e;
 				}
 				
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.err.println("[Error] Failed to get fridge contents");
 		}
 	}
 	
